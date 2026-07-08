@@ -1,22 +1,8 @@
-import 'dotenv/config';
-import { PrismaMariaDb } from '@prisma/adapter-mariadb';
-import { PrismaClient, UserRole ,CapstoneStatus} from '../src/generated/prisma'; // Sửa lại đường dẫn import cho đúng với output client của bạn
+import { UserRole, CapstoneStatus } from '../src/generated/prisma'; // Sửa lại đường dẫn import cho đúng với output client của bạn
+import { prisma } from '@/lib/prisma';
 
-const dbUrl = process.env.DATABASE_URL;
-if (!dbUrl) {
-  throw new Error("DATABASE_URL is not defined in environment variables");
-}
 
-const url = new URL(dbUrl);
-const adapter = new PrismaMariaDb({
-  host: url.hostname || 'localhost',
-  port: url.port ? parseInt(url.port) : 3306,
-  user: decodeURIComponent(url.username) || 'root',
-  password: decodeURIComponent(url.password) || undefined,
-  database: decodeURIComponent(url.pathname.substring(1)),
-});
 
-const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('🌱 Bắt đầu seed dữ liệu...');
@@ -205,8 +191,8 @@ async function main() {
     { targetYearName: '2023-2024', semester_name: 'Học kỳ 4', startMonthDay: '02-01', endMonthDay: '06-30' },
     { targetYearName: '2024-2025', semester_name: 'Học kỳ 5', startMonthDay: '09-01', endMonthDay: '01-15' },
     { targetYearName: '2024-2025', semester_name: 'Học kỳ 6', startMonthDay: '02-01', endMonthDay: '06-30' },
-    { targetYearName: '2025-2026', semester_name: 'Học kỳ 7', startMonthDay: '09-01', endMonthDay: '1-15' },  
-    { targetYearName: '2025-2026', semester_name: 'Học kỳ 8', startMonthDay: '02-01', endMonthDay: '06-30' },  
+    { targetYearName: '2025-2026', semester_name: 'Học kỳ 7', startMonthDay: '09-01', endMonthDay: '1-15' },
+    { targetYearName: '2025-2026', semester_name: 'Học kỳ 8', startMonthDay: '02-01', endMonthDay: '06-30' },
   ];
 
   for (let index = 0; index < danhSachHocKy.length; index++) {
@@ -219,7 +205,7 @@ async function main() {
       throw new Error(`Không tìm thấy năm học có tên là ${hocKy.targetYearName} trong DB!`);
     }
     const fullStartDate = new Date(`${academicYearData.start_year}-${hocKy.startMonthDay}`);
-    
+
     // Học kỳ 1 thường kết thúc vào đầu năm sau (ví dụ tháng 1 năm 2024), nên ta dùng end_year của năm học
     const fullEndDate = new Date(`${academicYearData.end_year}-${hocKy.endMonthDay}`);
     await prisma.semester.upsert({
@@ -259,7 +245,7 @@ async function main() {
   for (let index = 0; index < danhSachMilestones.length; index++) {
     const nextMilestoneId = 1n + BigInt(index);
     const ms = danhSachMilestones[index];
-    
+
     // Tự động cộng thêm ngày để ra deadline thực tế sinh động
     const deadlineDate = new Date(baseDate);
     deadlineDate.setDate(deadlineDate.getDate() + ms.daysFromStart);
@@ -461,7 +447,7 @@ async function main() {
         topic_id: currentTopicId,
         lecturer_id: currentLecturerId,
         semester_id: 8n, // Thuộc học kỳ đồ án (8)
-        council_id: currentCouncilId, 
+        council_id: currentCouncilId,
         status: CapstoneStatus.DOING, // Trạng thái đang thực hiện đồ án mẫu
         student_message: 'Em chào thầy/cô, em xin đăng ký thực hiện đề tài này ạ!',
         lecturer_feedback: 'Đề tài tốt, cần tập trung làm rõ phần thiết kế hệ thống nhé.',

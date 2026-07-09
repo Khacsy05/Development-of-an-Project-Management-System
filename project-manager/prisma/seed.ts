@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { UserRole, CapstoneStatus } from '../src/generated/prisma'; // Sửa lại đường dẫn import cho đúng với output client của bạn
 import { prisma } from '@/lib/prisma';
 
@@ -34,6 +35,8 @@ async function main() {
     create: { role_id: 4n, role_name: UserRole.Faculty },
   });
 
+  const hashedPassword = await bcrypt.hash('password_da_ma_hoa_cho_nay', 10);
+
 
   // 2. Tạo tài khoản Giảng viên (User)
   // Cho vòng lặp chạy từ 1 đến 6 để tạo tự động 6 giảng viên
@@ -50,7 +53,7 @@ async function main() {
         user_id: userId,
         usercode: usercode,
         username: username,
-        password: 'password_da_ma_hoa_cho_nay',
+        password: hashedPassword,
         email: `giangvien${i}@tlu.edu.vn`,
         fullname: `Giảng Viên Thử Nghiệm ${i}`,
         role_id: lecturerRole.role_id, // Gán quyền Giảng viên đã tạo ở bước trước
@@ -131,7 +134,7 @@ async function main() {
   for (let i = 1; i <= 5; i++) {
     const userId = 2351170610n + BigInt(i); // Sẽ sinh ra: 2351170611n, 2351170612n, 2351170613n...
     const usercode = `SV${String(i).padStart(3, '0')}`;
-    const username = `sv_sinhhvien${i}`;
+    const username = `sv_sinhvien${i}`;
     await prisma.user.upsert({
       where: { user_id: userId },
       update: {},
@@ -139,7 +142,7 @@ async function main() {
         user_id: userId,
         usercode: usercode,
         username: username,
-        password: 'password_da_ma_hoa_cho_nay',
+        password: hashedPassword,
         email: `student${i}@e.tlu.edu.vn`,
         fullname: `Sinh Viên Thử Nghiệm ${i}`,
         role_id: studentRole.role_id,

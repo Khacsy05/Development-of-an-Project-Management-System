@@ -12,7 +12,10 @@ export async function getTopicList(isAvailable?: boolean) {
         include: {
             expertise: { select: { name: true } },
         },
-        orderBy: { created_at: 'desc' }
+        orderBy: [
+            { created_at: 'desc' },
+            { topic_id: 'desc' }
+        ]
     });
     return serialize(rawData);
 }

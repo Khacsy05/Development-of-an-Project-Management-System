@@ -4,15 +4,11 @@ function serialize(data: any) {
     return JSON.parse(JSON.stringify(data, (_, v) => typeof v === 'bigint' ? v.toString() : v));
 }
 
-export async function getClassList() {
-    const rawData = await prisma.class.findMany({
-        include: {
-            major: { select: { major_name: true } },
-            lecturer: { select: { usercode: true, fullname: true } },
-        },
+export async function getExpertiseList() {
+    const rawData = await prisma.expertise.findMany({
         orderBy: [
             { created_at: 'desc' },
-            { class_id: 'desc' }
+            { expertise_id: 'desc' }
         ]
     });
     return serialize(rawData);

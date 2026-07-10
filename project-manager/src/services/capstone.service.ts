@@ -13,7 +13,10 @@ export async function getCapstoneList(status?: CapstoneStatus) {
             topic: { select: { title: true } },
             lecturer: { select: { usercode: true, fullname: true } },
         },
-        orderBy: { created_at: 'desc' }
+        orderBy: [
+            { created_at: 'desc' },
+            { capstone_id: 'desc' }
+        ]
     });
     return serialize(rawData);
 }

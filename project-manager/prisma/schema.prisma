@@ -41,6 +41,8 @@ model User {
   gender             String?             @db.VarChar(10)
   phone_number       String?             @unique @db.VarChar(15)
   is_active          Boolean             @default(true)
+  faculty_id         BigInt?             // Để Optional (?) vì tài khoản Admin tối cao thì không thuộc khoa nào cả
+  faculty            Faculty?            @relation(fields: [faculty_id], references: [faculty_id], onDelete: Restrict, onUpdate: Cascade)
   first_login        Boolean             @default(true)
   role_id            BigInt              @db.UnsignedBigInt
   role               Role                @relation(fields: [role_id], references: [role_id], onDelete: Restrict, onUpdate: Cascade)
@@ -69,9 +71,23 @@ model PasswordReset {
   created_at        DateTime? @default(now()) @db.Timestamp(0)
 }
 
+model Faculty {
+  faculty_id   BigInt       @id @default(autoincrement())
+  faculty_code String       @unique @db.VarChar(20) // Ví dụ: 'CNTT', 'CK'
+  name         String       @db.VarChar(255)        // Ví dụ: 'Công nghệ thông tin'
+  created_at   DateTime?    @default(now()) @db.Timestamp(0)
+  updated_at   DateTime?    @updatedAt @db.Timestamp(0)
+  
+  // Mối quan hệ liên kết ngược: Một khoa có nhiều chuyên môn
+  majors       Major[]
+  users        User[]
+}
+
 model Major {
   major_id   BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
   major_name String    @db.VarChar(255)
+  faculty_id BigInt    
+  faculty    Faculty   @relation(fields: [faculty_id], references: [faculty_id], onDelete: Cascade, onUpdate: Cascade)
   created_at DateTime? @default(now()) @db.Timestamp(0)
   updated_at DateTime? @updatedAt @db.Timestamp(0)
   class      Class[]

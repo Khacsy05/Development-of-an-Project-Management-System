@@ -9,17 +9,18 @@ const secretKey = new TextEncoder().encode(JWT_SECRET);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  // 1. Lấy token từ trong Cookie gửi kèm theo request
   const token = request.cookies.get('token')?.value;
 
-  // 2. Định nghĩa các tuyến đường cần bảo vệ
+  // 1. GIAO DIỆN
   const isAuthRoute = pathname.startsWith('/login');
   const isDashboardRoute = pathname.startsWith('/dashboard');
   const isAdminRoute = pathname.startsWith('/admin');
-  const isProtectedApiRoute = pathname.startsWith('/api/capstones') || pathname.startsWith('/api/topics');
 
-  // Nếu người dùng vào các trang quản lý hoặc gọi API được bảo vệ cần đăng nhập
+  // 2. API: Chỉ trừ API /api/auth (Đăng nhập/Đăng ký) ra, còn lại bảo vệ HẾT!
+  const isApiRoute = pathname.startsWith('/api');
+  const isProtectedApiRoute = isApiRoute && !pathname.startsWith('/api/auth');
+
+  // Kiểm tra đăng nhập
   if (isDashboardRoute || isAdminRoute || isProtectedApiRoute) {
     if (!token) {
       if (isProtectedApiRoute) {
@@ -28,59 +29,58 @@ export async function middleware(request: NextRequest) {
           { status: 401 }
         );
       }
-      // Chưa có token? Đá ngay về trang login kèm theo trang đích để đăng nhập xong quay lại
       return NextResponse.redirect(new URL(`/login?callbackUrl=${pathname}`, request.url));
     }
 
     try {
-      // 3. Tiến hành giải mã Token bằng thư viện 'jose'
       const { payload } = await jwtVerify(token, secretKey);
+      const userRole = payload.role as string;
 
-      const userRole = payload.role as string; // Lấy ra quyền (Admin, Student, Lecturer)
+      // 3. THẮT CHẶT QUYỀN TRUY CẬP ADMIN (Cả giao diện /admin lẫn API /api/admin)
+      const isTryingToAccessAdmin = isAdminRoute || pathname.startsWith('/api/admin');
 
-      // 4. Phân quyền thắt chặt: Nếu cố tình vào trang Admin mà không phải quyền Admin
-      if (isAdminRoute && userRole !== 'Admin') {
-        // Trả về trang lỗi từ chối truy cập hoặc đá về dashboard thường
+      if (isTryingToAccessAdmin && userRole !== 'Admin') {
+        // Nếu cố gọi API Admin lậu -> Trả về JSON lỗi luôn
+        if (isApiRoute) {
+          return NextResponse.json(
+            { success: false, message: 'Bạn không có quyền truy cập tài nguyên này!' },
+            { status: 403 } // 403 Forbidden: Đúng token nhưng sai quyền
+          );
+        }
+        // Nếu cố vào trang giao diện admin lậu -> Đá về dashboard
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
 
     } catch (error) {
-      // Token giả mạo hoặc hết hạn?
       if (isProtectedApiRoute) {
         return NextResponse.json(
           { success: false, message: 'Token không hợp lệ hoặc đã hết hạn!' },
           { status: 401 }
         );
       }
-      // Xóa cookie rác và đá về trang login
       const response = NextResponse.redirect(new URL('/login', request.url));
       response.cookies.delete('token');
       return response;
     }
   }
 
-  // Nếu người dùng ĐÃ ĐĂNG NHẬP rồi mà vẫn cố tình vào lại trang `/login`
+  // Logic check login hoán đổi giữ nguyên...
   if (isAuthRoute && token) {
     try {
       await jwtVerify(token, secretKey);
-      // Đang yên đang lành thì phi thẳng vào trang chủ/dashboard luôn, không cho login nữa
       return NextResponse.redirect(new URL('/dashboard', request.url));
-    } catch (e) {
-      // Token lỗi thì cho họ ở lại trang login bình thường
-    }
+    } catch (e) { }
   }
 
   return NextResponse.next();
 }
 
-// 5. Cấu hình "Matcher" để báo cho Next.js biết Middleware chỉ cần chạy ở những trang nào
-// Né các file hệ thống, hình ảnh, icon ra để web chạy cho nhanh
+// 4. CẬP NHẬT LẠI MATCHER: Đăng ký chặn toàn bộ cụm API
 export const config = {
   matcher: [
     '/dashboard/:path*',
     '/admin/:path*',
     '/login',
-    '/api/capstones/:path*',
-    '/api/topics/:path*',
+    '/api/admin/:path*', // 🌟 Gom gọn gàng thế này là bắt trọn gói mọi API!
   ],
 };

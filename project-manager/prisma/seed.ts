@@ -37,6 +37,29 @@ async function main() {
 
   const hashedPassword = await bcrypt.hash('password_da_ma_hoa_cho_nay', 10);
 
+  const danhSachFaculty = [
+    { faculty_code: 'CNTT', name: 'Khoa Công nghệ thông tin' },
+    { faculty_code: 'CT', name: 'Khoa Công trình' },
+    { faculty_code: 'KT', name: 'Khoa Kinh tế' },
+    { faculty_code: 'CK', name: 'Khoa Cơ Khí' },
+    { faculty_code: 'KTN', name: 'Khoa Khoa học tự nhiên' },
+    { faculty_code: 'KHXH', name: 'Khoa Khoa học xã hội' },
+    { faculty_code: 'QTKD', name: 'Khoa Quản trị kinh doanh' },
+  ];
+
+  for (let index = 0; index < danhSachFaculty.length; index++) {
+    const faculty = danhSachFaculty[index];
+    const falcultyId = 1000n + BigInt(index); 
+    await prisma.faculty.upsert({
+      where: { faculty_code: faculty.faculty_code },
+      update: {},
+      create: {
+        faculty_id: falcultyId,
+        faculty_code: faculty.faculty_code,
+        name: faculty.name,
+      },
+    });
+  }
 
   // 2. Tạo tài khoản Giảng viên (User)
   // Cho vòng lặp chạy từ 1 đến 6 để tạo tự động 6 giảng viên
@@ -61,6 +84,42 @@ async function main() {
     });
   }
 
+  for (let i = 1; i <= 7; i++) {
+    // Tự động tính toán giá trị dựa theo biến chạy i
+    const userId = 10n + BigInt(i);  
+    const facultyId = 1000n + BigInt(i);              
+    const usercode = `HDK${String(i).padStart(3, '0')}`; // Sẽ sinh ra: GV001, GV002, GV003...
+    const username = `hdk_hoidongkhoa${i}`;           // Sẽ sinh ra: gv_hoidongkhoa1, gv_hoidongkhoa2...
+
+    await prisma.user.upsert({
+      where: { user_id: userId },
+      update: {},
+      create: {
+        user_id: userId,
+        usercode: usercode,
+        username: username,
+        password: hashedPassword,
+        faculty_id: facultyId,
+        email: `hoidongkhoa${i}@tlu.edu.vn`,
+        fullname: `Hội đồng khoa ${i}`,
+        role_id: facultyRole.role_id, // Gán quyền Giảng viên đã tạo ở bước trước
+      },
+    });
+  }
+
+  const admin = await prisma.user.upsert({
+    where: { user_id: 1n },
+      update: {},
+      create: {
+        user_id: 1n,
+        usercode: "ADMIN001",
+        username: "admin",
+        password: hashedPassword,
+        email: "admin@tlu.edu.vn",
+        fullname: "Quản trị viên",
+        role_id: adminRole.role_id, // Gán quyền Quản trị viên đã tạo ở bước trước
+      },
+  })
 
   // 4. Tạo Chuyên ngành và Lớp học
   const major = await prisma.major.upsert({
@@ -69,6 +128,7 @@ async function main() {
     create: {
       major_id: 1n,
       major_name: 'Hệ thống thông tin',
+      faculty_id: 1000n, // Gán cho Khoa CNTT (faculty_id: 1001n)
     },
   });
 
@@ -89,6 +149,7 @@ async function main() {
       update: {},
       create: {
         major_id: nextMajorId,
+        faculty_id: 1000n, // Gán cho Khoa CNTT (faculty_id: 1001n)
         major_name: cacNganhKhac[index],
       },
     });
@@ -279,7 +340,6 @@ async function main() {
   for (let index = 0; index < danhSachChuyenMon.length; index++) {
     const nextExpertiseId = 1n + BigInt(index);
     const exp = danhSachChuyenMon[index];
-
     await prisma.expertise.upsert({
       where: { expertise_id: nextExpertiseId },
       update: {},

@@ -42,6 +42,9 @@ model User {
   is_active          Boolean             @default(true)
   faculty_id         BigInt?             // Để Optional (?) vì tài khoản Admin tối cao thì không thuộc khoa nào cả
   faculty            Faculty?            @relation(fields: [faculty_id], references: [faculty_id], onDelete: Restrict, onUpdate: Cascade)
+
+  managed_faculty    Faculty?            @relation("FacultyDean")
+
   first_login        Boolean             @default(true)
   role_id            BigInt              @db.UnsignedBigInt
   role               Role                @relation(fields: [role_id], references: [role_id], onDelete: Restrict, onUpdate: Cascade)
@@ -80,6 +83,9 @@ model Faculty {
   // Mối quan hệ liên kết ngược: Một khoa có nhiều chuyên môn
   majors       Major[]
   users        User[]
+  topics       Topic[]
+  dean_id      BigInt?   @unique @db.UnsignedBigInt
+  dean         User?     @relation("FacultyDean", fields: [dean_id], references: [user_id], onDelete: SetNull, onUpdate: Cascade)
 }
 
 model Major {
@@ -95,6 +101,7 @@ model Major {
 model Class {
   class_id    BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
   class_name  String           @db.VarChar(255)
+
   major_id    BigInt           @db.UnsignedBigInt
   major       Major            @relation(fields: [major_id], references: [major_id], onDelete: Cascade, onUpdate: Cascade)
   lecturer_id BigInt           @db.UnsignedBigInt
@@ -102,6 +109,7 @@ model Class {
   created_at  DateTime?        @default(now()) @db.Timestamp(0)
   updated_at  DateTime?        @updatedAt @db.Timestamp(0)
   students    StudentProfile[]
+  
 }
 
 model StudentProfile {
@@ -194,6 +202,8 @@ model Topic {
   created_by    BigInt    @db.UnsignedBigInt
   creator       User      @relation(fields: [created_by], references: [user_id], onDelete: Restrict, onUpdate: Cascade)
   title         String    @db.VarChar(255)
+  faculty_id    BigInt    
+  faculty       Faculty   @relation(fields: [faculty_id], references: [faculty_id], onDelete: Cascade, onUpdate: Cascade)
   description   String?   @db.Text
   technologies  String    @db.Text
   is_bank_topic Boolean   @default(true)

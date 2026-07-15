@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { CapstonesService } from './capstones.service';
 import { CreateCapstoneDto } from './dto/create-capstone.dto';
 import { UpdateCapstoneDto } from './dto/update-capstone.dto';
+import { CapstoneQuery } from './dto/query-capstone.dto';
 
 @Controller('capstones')
 export class CapstonesController {
@@ -13,8 +14,8 @@ export class CapstonesController {
   }
 
   @Get()
-  findAll() {
-    return this.capstonesService.findAll();
+  findAll(@Query("") query : CapstoneQuery) {
+    return this.capstonesService.findAll(query);
   }
 
   @Get(':id')

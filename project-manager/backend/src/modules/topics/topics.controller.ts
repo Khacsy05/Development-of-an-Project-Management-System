@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestj
 import { TopicService } from './topics.service';
 import { CreateTopicDto } from './dto/create-topic.dto';
 import { UpdateTopicDto } from './dto/update-topic.dto';
+import { TopicQuery } from './dto/query-topic.dto';
 
 @Controller('topics')
 export class TopicController {
@@ -13,8 +14,8 @@ export class TopicController {
   }
 
   @Get()
-  findAll(@Query('isAvailable') isAvailable?: string) {
-    return this.topicService.findAll(isAvailable);
+  findAll(@Query() query: TopicQuery) {
+    return this.topicService.findAll(query);
   }
 
   @Get(':id')

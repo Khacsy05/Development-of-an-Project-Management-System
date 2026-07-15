@@ -1,8 +1,23 @@
 import bcrypt from 'bcryptjs';
-import { UserRole, CapstoneStatus } from '../../frontend/src/generated/prisma'; // Sửa lại đường dẫn import cho đúng với output client của bạn
-import { PrismaClient } from '@prisma/client'; // 🌟 Trỏ về đúng client của backend
+import { PrismaClient, UserRole, CapstoneStatus } from '@prisma/client';
+import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import 'dotenv/config';
 
-const prisma = new PrismaClient();
+const dbUrl = process.env.DATABASE_URL;
+if (!dbUrl) {
+  throw new Error("DATABASE_URL is not defined in environment variables");
+}
+
+const url = new URL(dbUrl);
+const adapter = new PrismaMariaDb({
+  host: url.hostname || 'localhost',
+  port: url.port ? parseInt(url.port) : 3306,
+  user: decodeURIComponent(url.username) || 'root',
+  password: decodeURIComponent(url.password) || undefined,
+  database: decodeURIComponent(url.pathname.substring(1)),
+});
+
+const prisma = new PrismaClient({ adapter });
 
 
 
@@ -85,13 +100,11 @@ async function main() {
       },
     });
   }
-
   for (let i = 1; i <= 7; i++) {
-    // Tự động tính toán giá trị dựa theo biến chạy i
     const userId = 10n + BigInt(i);  
-    const facultyId = 1000n + BigInt(i);              
-    const usercode = `HDK${String(i).padStart(3, '0')}`; // Sẽ sinh ra: GV001, GV002, GV003...
-    const username = `hdk_hoidongkhoa${i}`;           // Sẽ sinh ra: gv_hoidongkhoa1, gv_hoidongkhoa2...
+    const facultyId = 1000n + BigInt(i - 1);              
+    const usercode = `HDK${String(i).padStart(3, '0')}`;
+    const username = `hdk_hoidongkhoa${i}`;           
 
     await prisma.user.upsert({
       where: { user_id: userId },
@@ -104,7 +117,7 @@ async function main() {
         faculty_id: facultyId,
         email: `hoidongkhoa${i}@tlu.edu.vn`,
         fullname: `Hội đồng khoa ${i}`,
-        role_id: facultyRole.role_id, // Gán quyền Giảng viên đã tạo ở bước trước
+        role_id: facultyRole.role_id,
       },
     });
   }
@@ -416,6 +429,7 @@ async function main() {
         topic_id: nextTopicId,
         expertise_id: tp.expId,
         created_by: tp.createdBy,
+        faculty_id: 1000n,
         title: tp.title,
         description: `Mô tả chi tiết và yêu cầu kỹ thuật cho đề tài: ${tp.title}`,
         technologies: tp.tech,

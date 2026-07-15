@@ -9,9 +9,10 @@ import { ClassesModule } from './modules/classes/classes.module';
 import { AcademicYearsModule } from './modules/academic-years/academic-years.module';
 import { CapstonesModule } from './modules/capstones/capstones.module';
 import { CouncilsModule } from './modules/councils/councils.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
-  imports: [PrismaModule, FacultiesModule, TopicModule, UsersModule, ClassesModule, AcademicYearsModule, CapstonesModule, CouncilsModule],
+  imports: [PrismaModule, FacultiesModule, TopicModule, UsersModule, ClassesModule, AcademicYearsModule, CapstonesModule, CouncilsModule, AuthModule],
   controllers: [AppController],
   providers: [AppService],
 })

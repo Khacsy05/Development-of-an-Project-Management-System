@@ -2,7 +2,7 @@
   "compilerOptions": {
     "module": "node16",
     "moduleResolution": "node16",
-    "types": ["node"],
+    "types": ["node", "jest"],
     "esModuleInterop": true,
     "isolatedModules": true,
     "declaration": true,
@@ -22,6 +22,6 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": ["src/**/*"], 
-  "exclude": ["node_modules", "dist", "prisma", "../frontend/**/*"]
+  "include": ["src/**/*", "prisma/**/*.ts", "prisma.config.ts"],
+  "exclude": ["node_modules", "dist", "../frontend/**/*"]
 }

@@ -528,8 +528,6 @@ async function main() {
         semester_id: 8n, // Thuộc học kỳ đồ án (8)
         council_id: currentCouncilId,
         status: CapstoneStatus.DOING, // Trạng thái đang thực hiện đồ án mẫu
-        student_message: 'Em chào thầy/cô, em xin đăng ký thực hiện đề tài này ạ!',
-        lecturer_feedback: 'Đề tài tốt, cần tập trung làm rõ phần thiết kế hệ thống nhé.',
         final_report_path: i === 5 ? null : `/uploads/reports/capstone_${i}_final.pdf`, // Sinh viên 5 chưa nộp bản cuối
         instructor_grade: parseFloat((3.0 + Math.random()).toFixed(2)), // Tự sinh điểm hướng dẫn 3.0 -> 4.0
         council_grade: parseFloat((3.0 + Math.random()).toFixed(2)),      // Tự sinh điểm hội đồng

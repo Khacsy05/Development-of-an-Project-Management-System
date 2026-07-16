@@ -10,7 +10,10 @@ export class AuthService {
     async login(loginDto: LoginDto){
         const {username,password} = loginDto;
         const user = await this.prisma.user.findUnique({
-            where: {username: username}
+            where: {username: username},
+            include : {
+                role: true
+            }
         })
         if (!user) {
             throw new UnauthorizedException('Email hoặc mật khẩu không chính xác!');
@@ -27,6 +30,7 @@ export class AuthService {
                 id: user.user_id,
                 name: user.fullname,
                 email: user.email,
+                role: user.role.role_name,
             },
             process.env.JWT_SECRET || "SECRET_KEY",
             { expiresIn: "15m" }
@@ -34,13 +38,14 @@ export class AuthService {
 
         // 4. Nếu khớp hoàn toàn, trả về thông tin user (hoặc Access Token JWT)
         return {
-        message: 'Đăng nhập thành công',
-        token,
-        user: {
-            id: user.user_id,
-            name: user.fullname,
-            email: user.email,
-        },
+            message: 'Đăng nhập thành công',
+            token,
+            user: {
+                id: user.user_id,
+                name: user.fullname,
+                email: user.email,
+                role: user.role.role_name,
+            },
         };
     }
 }

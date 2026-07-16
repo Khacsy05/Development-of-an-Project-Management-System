@@ -14,12 +14,15 @@ enum UserRole {
 }
 
 enum CapstoneStatus {
-  PENDING_APPROVAL
-  DOING
-  SUBMITTED_FINAL
-  DEFENSE_ELIGIBLE
-  COMPLETED
-  FAILED
+  PENDING_LECTURER   // Đang chờ Giảng viên hướng dẫn duyệt
+  REJECTED_LECTURER  // Bị Giảng viên từ chối (Được chọn lại GV)
+  PENDING_FACULTY    // Đang chờ Khoa duyệt đề tài
+  REJECTED_FACULTY   // Bị Khoa từ chối đề tài (Được chọn lại đề tài)
+  DOING              // Khoa và GVHD đều đã duyệt -> Chính thức thực hiện
+  SUBMITTED_FINAL    // Sinh viên đã nộp báo cáo cuối kỳ
+  DEFENSE_ELIGIBLE   // Đủ điều kiện ra hội đồng bảo vệ
+  COMPLETED          // Đã bảo vệ và có điểm cuối cùng
+  FAILED             // Bị trượt
 }
 
 model Role {
@@ -58,9 +61,11 @@ model User {
   classes_managed    Class[]             // Giảng viên quản lý lớp cố vấn
   lecturer_expertises LecturerExpertise[] // Chuyên môn của giảng viên
   topics_created     Topic[]             // Đề tài do user này tạo ra
-  student_capstones  Capstone[]          @relation("StudentCapstones")
+  student_capstones  Capstone?          @relation("StudentCapstones")
   lecturer_capstones Capstone[]          @relation("LecturerCapstones")
   council_memberships CouncilMember[]     // Tham gia vào hội đồng
+  capstone_requests CapstoneRequest[] @relation("UserCapstoneRequests")
+  feedbacks_written  CapstoneFeedback[] @relation("UserFeedbacks")
 }
 
 model PasswordReset {
@@ -219,28 +224,88 @@ model Topic {
 // 2.14 Bảng capstones (Hồ sơ Đồ án Tốt nghiệp)
 // ==========================================
 model Capstone {
-  capstone_id        BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  student_id         BigInt    @db.UnsignedBigInt
-  student            User      @relation("StudentCapstones", fields: [student_id], references: [user_id], onDelete: Restrict, onUpdate: Cascade)
-  topic_id           BigInt    @db.UnsignedBigInt
-  topic              Topic     @relation(fields: [topic_id], references: [topic_id], onDelete: Restrict, onUpdate: Cascade)
-  lecturer_id        BigInt    @db.UnsignedBigInt
-  lecturer           User      @relation("LecturerCapstones", fields: [lecturer_id], references: [user_id], onDelete: Restrict, onUpdate: Cascade)
-  semester_id        BigInt    @db.UnsignedBigInt
-  semester           Semester  @relation(fields: [semester_id], references: [semester_id], onDelete: Restrict, onUpdate: Cascade)
-  council_id         BigInt?   @db.UnsignedBigInt
-  council            Council?  @relation(fields: [council_id], references: [council_id], onDelete: SetNull, onUpdate: Cascade)
+  capstone_id        BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
   
-  status             CapstoneStatus    @default(PENDING_APPROVAL) 
-  student_message    String?   @db.Text
-  lecturer_feedback  String?   @db.Text
-  final_report_path  String?   @db.VarChar(255)
-  instructor_grade   Decimal?  @db.Decimal(4, 2) // Thang 10.00
-  council_grade      Decimal?  @db.Decimal(4, 2) // Thang 10.00
-  defense_order      Int?      @db.TinyInt
+  student_id         BigInt          @unique @db.UnsignedBigInt
+  student            User            @relation("StudentCapstones", fields: [student_id], references: [user_id], onDelete: Restrict, onUpdate: Cascade)
   
-  created_at         DateTime? @default(now()) @db.Timestamp(0)
-  updated_at         DateTime? @updatedAt @db.Timestamp(0)
+  // OPTIONAL (Có dấu ?): Để sinh viên có thể đăng ký 1 trong 2 trước
+  topic_id           BigInt?         @db.UnsignedBigInt
+  topic              Topic?          @relation(fields: [topic_id], references: [topic_id], onDelete: Restrict, onUpdate: Cascade)
+  
+  lecturer_id        BigInt?         @db.UnsignedBigInt
+  lecturer           User?           @relation("LecturerCapstones", fields: [lecturer_id], references: [user_id], onDelete: Restrict, onUpdate: Cascade)
+  
+  semester_id        BigInt          @db.UnsignedBigInt
+  semester           Semester        @relation(fields: [semester_id], references: [semester_id], onDelete: Restrict, onUpdate: Cascade)
+  
+  council_id         BigInt?         @db.UnsignedBigInt
+  council            Council?        @relation(fields: [council_id], references: [council_id], onDelete: SetNull, onUpdate: Cascade)
+  
+  status             CapstoneStatus  @default(PENDING_LECTURER) 
+  
+  final_report_path  String?         @db.VarChar(255)
+  instructor_grade   Decimal?        @db.Decimal(4, 2)
+  council_grade      Decimal?        @db.Decimal(4, 2)
+  defense_order      Int?            @db.TinyInt
+  
+  created_at         DateTime?       @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?       @updatedAt @db.Timestamp(0)
+
+  // Mối quan hệ tới bảng Lịch sử yêu cầu
+  requests           CapstoneRequest[]
+  feedbacks          CapstoneFeedback[]
+}
+
+model CapstoneRequest {
+  request_id   BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  
+  capstone_id  BigInt    @db.UnsignedBigInt
+  capstone     Capstone  @relation(fields: [capstone_id], references: [capstone_id], onDelete: Cascade, onUpdate: Cascade)
+  
+  sender_id    BigInt    @db.UnsignedBigInt
+  sender       User      @relation("UserCapstoneRequests", fields: [sender_id], references: [user_id], onDelete: Cascade, onUpdate: Cascade)
+  
+  // Phân loại yêu cầu: "REGISTER_LECTURER" (Xin thầy hướng dẫn), "REGISTER_TOPIC" (Xin Khoa duyệt đề tài)
+  request_type String    @db.VarChar(50) 
+  
+  // Nội dung sinh viên viết (VD: "Em muốn xin thầy hướng dẫn đề tài này ạ...")
+  message      String    @db.Text 
+  target_id    BigInt?           @db.UnsignedBigInt
+  // Trạng thái của riêng cái request này: PENDING, APPROVED, REJECTED
+  status       String    @default("PENDING") @db.VarChar(20) 
+  
+  // Lời nhắn phản hồi của GVHD hoặc Khoa (Đặc biệt dùng khi TỪ CHỐI để ghi lý do)
+  feedback     String?   @db.Text 
+  
+  created_at   DateTime? @default(now()) @db.Timestamp(0)
+  updated_at   DateTime? @updatedAt @db.Timestamp(0)
+}
+
+// ==========================================
+// Bảng CapstoneFeedback: Lưu tất cả nhận xét, đánh giá tiến độ & chấm điểm
+// ==========================================
+model CapstoneFeedback {
+  feedback_id  BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  
+  capstone_id  BigInt    @db.UnsignedBigInt
+  capstone     Capstone  @relation(fields: [capstone_id], references: [capstone_id], onDelete: Cascade, onUpdate: Cascade)
+  
+  // Người viết nhận xét (Có thể là GVHD hoặc Trưởng khoa/Giáo vụ đại diện Hội đồng)
+  author_id    BigInt    @db.UnsignedBigInt
+  author       User      @relation("UserFeedbacks", fields: [author_id], references: [user_id], onDelete: Restrict, onUpdate: Cascade)
+  
+  // Vai trò của người nhận xét tại thời điểm đó: "LECTURER" hoặc "FACULTY"
+  author_role  String    @db.VarChar(20) 
+  
+  // Tiêu đề nhận xét (VD: "Nhận xét tuần 3", "Đánh giá báo cáo giữa kỳ", "Nhận xét chấm điểm cuối kỳ")
+  title        String    @db.VarChar(100)
+  
+  // Nội dung nhận xét chi tiết
+  content      String    @db.Text 
+  
+  created_at   DateTime? @default(now()) @db.Timestamp(0)
+  updated_at   DateTime? @updatedAt @db.Timestamp(0)
 }
 
 // ==========================================

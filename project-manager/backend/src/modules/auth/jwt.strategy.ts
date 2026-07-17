@@ -32,8 +32,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     // Bạn return dữ liệu gì ở đây, NestJS sẽ tự động đính dữ liệu đó vào "request.user".
     // Nhờ vậy, RolesGuard chạy phía sau chỉ cần lấy "request.user.role_id" ra để so khớp.
     return {
-      id: payload.user_id,        // payload.sub thường là ID của user
-      name: payload.fullname,
+      id: payload.id,        // payload.sub thường là ID của user
+      name: payload.name,
       email: payload.email,
       role: payload.role, // Truyền role_id để khớp với DB của bạn
     };

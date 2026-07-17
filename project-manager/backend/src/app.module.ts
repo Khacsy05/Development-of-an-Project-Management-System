@@ -10,9 +10,10 @@ import { AcademicYearsModule } from './modules/academic-years/academic-years.mod
 import { CapstonesModule } from './modules/capstones/capstones.module';
 import { CouncilsModule } from './modules/councils/councils.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { CapstonesRequestModule } from './modules/capstones-request/capstones-request.module';
 
 @Module({
-  imports: [PrismaModule, FacultiesModule, TopicModule, UsersModule, ClassesModule, AcademicYearsModule, CapstonesModule, CouncilsModule, AuthModule],
+  imports: [PrismaModule, FacultiesModule, TopicModule, UsersModule, ClassesModule, AcademicYearsModule, CapstonesModule, CouncilsModule, AuthModule, CapstonesRequestModule],
   controllers: [AppController],
   providers: [AppService],
 })

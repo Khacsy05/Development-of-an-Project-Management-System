@@ -7,9 +7,16 @@ import { CapstoneQuery } from './dto/query-capstone.dto';
 @Injectable()
 export class CapstonesService {
   constructor(private prisma : PrismaService){}
-  async create(createCapstoneDto: CreateCapstoneDto) {
-    const {student_id} = createCapstoneDto
-    const studentIdBigInt = BigInt(student_id);
+  async create(createCapstoneDto: CreateCapstoneDto, req: any) {
+    const {} = createCapstoneDto
+    const user = req.user as any;
+    const studentIdBigInt = BigInt(user.id);
+    const student = await this.prisma.user.findUnique({
+      where: {
+        user_id: studentIdBigInt
+      },
+      include: {faculty: true}
+    })
     const currentSemester = await this.prisma.semester.findFirst({
       where: {
         start_date: { lte: new Date() },
@@ -33,6 +40,7 @@ export class CapstonesService {
       data: {
         student_id : studentIdBigInt,
         semester_id : currentSemester.semester_id,
+        faculty_id: student!.faculty!.faculty_id
       }
     })
   }
@@ -81,9 +89,8 @@ export class CapstonesService {
     return `This action returns a #${id} capstone`;
   }
 
-  async update(capstone_id: number, updateCapstoneDto: UpdateCapstoneDto) {
+  async update(capstone_id: number, updateCapstoneDto: UpdateCapstoneDto, req: any) {
     const {
-      student_id,
       lecturer_id,
       topic_id,
       instructor_grade,
@@ -92,35 +99,36 @@ export class CapstonesService {
       status,
       defense_order,
       final_report_path,
-      message
+      message,
+      content,
+      title
     } = updateCapstoneDto
-
+    const capstoneIdBigInt = BigInt(capstone_id)
+    const user = req.user as any;
     const capstone = await this.prisma.capstone.findUnique({
       where : {
-        capstone_id: BigInt(capstone_id)
+        capstone_id: capstoneIdBigInt
+      },
+      include: {
+        faculty: true
       }
     })
     if(!capstone){
       throw new BadRequestException('Hồ sơ đồ án không tồn tại');
     }
-
-    
-    
-    try {
-      return await this.prisma.$transaction(async (tx) => {
+    return await this.prisma.$transaction(async (tx) => {
         const updateData: any = {
           status: lecturer_id ? 'PENDING_LECTURER' : (topic_id ? 'PENDING_FACULTY' : status),
           defense_order,
           final_report_path,
           instructor_grade,
           council_grade,
-          student_id: student_id ? BigInt(student_id) : undefined,
           council_id: council_id ? BigInt(council_id) : undefined,
         };
-
+        
         const updatedCapstone = await tx.capstone.update({
           where: {
-            capstone_id: BigInt(capstone_id)
+            capstone_id: capstoneIdBigInt
           },
           data: updateData
         });
@@ -136,7 +144,7 @@ export class CapstonesService {
 
           await tx.capstoneRequest.create({
             data: {
-              capstone_id: BigInt(capstone_id),
+              capstone_id: capstoneIdBigInt,
               sender_id: capstone.student_id, // Lấy ID của sinh viên sở hữu đồ án này
               request_type: requestType,
               message: message || `Sinh viên đăng ký ${requestType === 'REGISTER_LECTURER' ? 'giảng viên' : 'đề tài'} mới.`,
@@ -146,15 +154,24 @@ export class CapstonesService {
           });
         }
 
-        
-
+        if(content && title){
+          if(String(capstone.lecturer_id) !== String(user.id) || String(capstone.faculty.dean_id) !== String(user.id)){
+            throw new BadRequestException('Bạn không có quyền chấm');
+          }
+            await tx.capstoneFeedback.create({
+              data: {
+                capstone_id: capstoneIdBigInt,
+                author_id: BigInt(user.id),
+                author_role: "Lecturer",
+                content:content,
+                title:title,
+              }
+            });
+          
+          
+        }
       return updatedCapstone;
-      })
-      
-    } catch (error) {
-      throw new BadRequestException('Cập nhật thông tin đồ án thất bại. Vui lòng kiểm tra lại dữ liệu!');
-    }
-    
+    })
   }
 
   remove(id: number) {

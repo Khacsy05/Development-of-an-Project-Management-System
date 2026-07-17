@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Req } from '@nestjs/common';
 import { CapstonesService } from './capstones.service';
 import { CreateCapstoneDto } from './dto/create-capstone.dto';
 import { UpdateCapstoneDto } from './dto/update-capstone.dto';
@@ -15,8 +15,8 @@ export class CapstonesController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("Student")
-  create(@Body() createCapstoneDto: CreateCapstoneDto) {
-    return this.capstonesService.create(createCapstoneDto);
+  create(@Body() createCapstoneDto: CreateCapstoneDto, @Req() req: any) {
+    return this.capstonesService.create(createCapstoneDto,req);
   }
 
   @Get()
@@ -31,9 +31,9 @@ export class CapstonesController {
 
   @Patch(':capstone_id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("Student")
-  update(@Param('capstone_id') capstone_id: number, @Body() updateCapstoneDto: UpdateCapstoneDto) {
-    return this.capstonesService.update(capstone_id, updateCapstoneDto);
+  @Roles("Student", "Lecturer")
+  update(@Param('capstone_id') capstone_id: number, @Body() updateCapstoneDto: UpdateCapstoneDto, @Req() req: any) {
+    return this.capstonesService.update(capstone_id, updateCapstoneDto,req);
   }
 
   @Delete(':id')

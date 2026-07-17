@@ -14,6 +14,7 @@ enum UserRole {
 }
 
 enum CapstoneStatus {
+  PENDING
   PENDING_LECTURER   // Đang chờ Giảng viên hướng dẫn duyệt
   REJECTED_LECTURER  // Bị Giảng viên từ chối (Được chọn lại GV)
   PENDING_FACULTY    // Đang chờ Khoa duyệt đề tài
@@ -23,6 +24,12 @@ enum CapstoneStatus {
   DEFENSE_ELIGIBLE   // Đủ điều kiện ra hội đồng bảo vệ
   COMPLETED          // Đã bảo vệ và có điểm cuối cùng
   FAILED             // Bị trượt
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED   
+  REJECTED            
 }
 
 model Role {
@@ -88,6 +95,7 @@ model Faculty {
   // Mối quan hệ liên kết ngược: Một khoa có nhiều chuyên môn
   majors       Major[]
   users        User[]
+  capstones    Capstone[]
   topics       Topic[]
   dean_id      BigInt?   @unique @db.UnsignedBigInt
   dean         User?     @relation("FacultyDean", fields: [dean_id], references: [user_id], onDelete: SetNull, onUpdate: Cascade)
@@ -242,8 +250,9 @@ model Capstone {
   council_id         BigInt?         @db.UnsignedBigInt
   council            Council?        @relation(fields: [council_id], references: [council_id], onDelete: SetNull, onUpdate: Cascade)
   
-  status             CapstoneStatus  @default(PENDING_LECTURER) 
-  
+  status             CapstoneStatus  @default(PENDING) 
+  faculty_id         BigInt    
+  faculty            Faculty   @relation(fields: [faculty_id], references: [faculty_id], onDelete: Cascade, onUpdate: Cascade)
   final_report_path  String?         @db.VarChar(255)
   instructor_grade   Decimal?        @db.Decimal(4, 2)
   council_grade      Decimal?        @db.Decimal(4, 2)
@@ -273,7 +282,7 @@ model CapstoneRequest {
   message      String    @db.Text 
   target_id    BigInt?           @db.UnsignedBigInt
   // Trạng thái của riêng cái request này: PENDING, APPROVED, REJECTED
-  status       String    @default("PENDING") @db.VarChar(20) 
+  status       RequestStatus    @default(PENDING)
   
   // Lời nhắn phản hồi của GVHD hoặc Khoa (Đặc biệt dùng khi TỪ CHỐI để ghi lý do)
   feedback     String?   @db.Text 

@@ -3,6 +3,7 @@ import { CreateCapstoneDto } from './create-capstone.dto';
 import { IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 import { CapstoneStatus } from '@prisma/client';
 
+
 export class UpdateCapstoneDto extends PartialType(CreateCapstoneDto) {
     @IsOptional()
     @IsString()
@@ -44,4 +45,12 @@ export class UpdateCapstoneDto extends PartialType(CreateCapstoneDto) {
     @IsOptional()
     @IsString()
     message?: string;
+
+    @IsOptional()
+    @IsString()
+    title?: string;
+
+    @IsOptional()
+    @IsString()
+    content?: string;
 }

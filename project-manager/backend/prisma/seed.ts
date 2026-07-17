@@ -524,6 +524,7 @@ async function main() {
         capstone_id: BigInt(i),
         student_id: currentStudentId,
         topic_id: currentTopicId,
+        faculty_id:1000,
         lecturer_id: currentLecturerId,
         semester_id: 8n, // Thuộc học kỳ đồ án (8)
         council_id: currentCouncilId,

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateCapstonesRequestDto } from './dto/create-capstones-request.dto';
 import { UpdateCapstonesRequestDto } from './dto/update-capstones-request.dto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CapstoneStatus } from '@prisma/client';
 
 @Injectable()
 export class CapstonesRequestService {
@@ -105,6 +106,31 @@ export class CapstonesRequestService {
             status: nextStatus
           }
         })
+
+        if (capstone.status !== CapstoneStatus.DOING && nextStatus === CapstoneStatus.DOING) {
+  
+          // 1. Kiểm tra xem thực sự trong DB đã có bản ghi submission nào chưa cho chắc chắn
+          const existingSubmissions = await tx.capstoneSubmission.findFirst({
+            where: { capstone_id: capstone.capstone_id }
+          });
+
+          // Nếu chưa từng có bản ghi nào thì mới tạo mới 4 giai đoạn
+          if (!existingSubmissions) {
+            const allMilestones = await tx.milestone.findMany();
+
+            const submissionPromises = allMilestones.map((milestone) => {
+              return tx.capstoneSubmission.create({
+                data: {
+                  capstone_id: capstone.capstone_id,
+                  milestone_id: milestone.milestone_id,
+                  status: 'PENDING', // Đợi sinh viên nộp bài
+                },
+              });
+            });
+
+            await Promise.all(submissionPromises);
+          }
+        }
 
         return updateCapstonesRequest
       })

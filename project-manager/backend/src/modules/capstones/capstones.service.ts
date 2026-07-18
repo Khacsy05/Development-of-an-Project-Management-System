@@ -100,11 +100,8 @@ export class CapstonesService {
       defense_order,
       final_report_path,
       message,
-      content,
-      title
     } = updateCapstoneDto
     const capstoneIdBigInt = BigInt(capstone_id)
-    const user = req.user as any;
     const capstone = await this.prisma.capstone.findUnique({
       where : {
         capstone_id: capstoneIdBigInt
@@ -154,22 +151,7 @@ export class CapstonesService {
           });
         }
 
-        if(content && title){
-          if(String(capstone.lecturer_id) !== String(user.id) || String(capstone.faculty.dean_id) !== String(user.id)){
-            throw new BadRequestException('Bạn không có quyền chấm');
-          }
-            await tx.capstoneFeedback.create({
-              data: {
-                capstone_id: capstoneIdBigInt,
-                author_id: BigInt(user.id),
-                author_role: "Lecturer",
-                content:content,
-                title:title,
-              }
-            });
-          
-          
-        }
+        
       return updatedCapstone;
     })
   }

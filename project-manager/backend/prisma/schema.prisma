@@ -13,6 +13,12 @@ enum UserRole {
   Student
 }
 
+enum SubmissionStatus{
+  PENDING
+  PASSED
+  FAILED
+}
+
 enum CapstoneStatus {
   PENDING
   PENDING_LECTURER   // Đang chờ Giảng viên hướng dẫn duyệt
@@ -72,7 +78,6 @@ model User {
   lecturer_capstones Capstone[]          @relation("LecturerCapstones")
   council_memberships CouncilMember[]     // Tham gia vào hội đồng
   capstone_requests CapstoneRequest[] @relation("UserCapstoneRequests")
-  feedbacks_written  CapstoneFeedback[] @relation("UserFeedbacks")
 }
 
 model PasswordReset {
@@ -162,6 +167,7 @@ model Semester {
   milestones    Milestone[]
   capstones     Capstone[]
   councils      Council[]
+  
 }
 
 // ==========================================
@@ -176,6 +182,8 @@ model Milestone {
   deadline     DateTime  @db.DateTime(0)
   created_at   DateTime? @default(now()) @db.Timestamp(0)
   updated_at   DateTime? @updatedAt @db.Timestamp(0)
+
+  submission   CapstoneSubmission[]
 }
 
 // ==========================================
@@ -263,7 +271,7 @@ model Capstone {
 
   // Mối quan hệ tới bảng Lịch sử yêu cầu
   requests           CapstoneRequest[]
-  feedbacks          CapstoneFeedback[]
+  submission         CapstoneSubmission[]
 }
 
 model CapstoneRequest {
@@ -291,32 +299,25 @@ model CapstoneRequest {
   updated_at   DateTime? @updatedAt @db.Timestamp(0)
 }
 
-// ==========================================
-// Bảng CapstoneFeedback: Lưu tất cả nhận xét, đánh giá tiến độ & chấm điểm
-// ==========================================
-model CapstoneFeedback {
-  feedback_id  BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  
-  capstone_id  BigInt    @db.UnsignedBigInt
-  capstone     Capstone  @relation(fields: [capstone_id], references: [capstone_id], onDelete: Cascade, onUpdate: Cascade)
-  
-  // Người viết nhận xét (Có thể là GVHD hoặc Trưởng khoa/Giáo vụ đại diện Hội đồng)
-  author_id    BigInt    @db.UnsignedBigInt
-  author       User      @relation("UserFeedbacks", fields: [author_id], references: [user_id], onDelete: Restrict, onUpdate: Cascade)
-  
-  // Vai trò của người nhận xét tại thời điểm đó: "LECTURER" hoặc "FACULTY"
-  author_role  String    @db.VarChar(20) 
-  
-  // Tiêu đề nhận xét (VD: "Nhận xét tuần 3", "Đánh giá báo cáo giữa kỳ", "Nhận xét chấm điểm cuối kỳ")
-  title        String    @db.VarChar(100)
-  
-  // Nội dung nhận xét chi tiết
-  content      String    @db.Text 
-  
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-}
 
+model CapstoneSubmission {
+  submission_id BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  capstone_id   BigInt     @db.UnsignedBigInt
+  capstone     Capstone  @relation(fields: [capstone_id], references: [capstone_id], onDelete: Cascade, onUpdate: Cascade)
+
+  milestone_id  BigInt     @db.UnsignedBigInt // Khóa ngoại liên kết bảng Milestone của bạn
+  milestone     Milestone  @relation(fields: [milestone_id], references: [milestone_id], onDelete: Cascade, onUpdate: Cascade)
+
+  file_path     String?    // Đường dẫn file báo cáo sinh viên nộp (.pdf, .zip)
+  student_note  String?    @db.Text // Lời nhắn của sinh viên
+  
+  grade         Float?     // Điểm giảng viên chấm cho giai đoạn này
+  lecturer_note String?    @db.Text // Lời nhận xét/feedback của giảng viên
+  
+  status        SubmissionStatus     @default(PENDING) // PENDING, PASSED, FAILED
+  created_at    DateTime? @default(now()) @db.Timestamp(0)
+  updated_at    DateTime? @updatedAt @db.Timestamp(0)
+}
 // ==========================================
 // 2.15 Bảng councils (Hội đồng Bảo vệ)
 // ==========================================

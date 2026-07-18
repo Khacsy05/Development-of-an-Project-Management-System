@@ -45,12 +45,4 @@ export class UpdateCapstoneDto extends PartialType(CreateCapstoneDto) {
     @IsOptional()
     @IsString()
     message?: string;
-
-    @IsOptional()
-    @IsString()
-    title?: string;
-
-    @IsOptional()
-    @IsString()
-    content?: string;
 }

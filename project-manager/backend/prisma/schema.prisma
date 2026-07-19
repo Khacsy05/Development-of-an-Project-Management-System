@@ -15,6 +15,7 @@ enum UserRole {
 
 enum SubmissionStatus{
   PENDING
+  SUBMITTED
   PASSED
   FAILED
 }
@@ -78,6 +79,7 @@ model User {
   lecturer_capstones Capstone[]          @relation("LecturerCapstones")
   council_memberships CouncilMember[]     // Tham gia vào hội đồng
   capstone_requests CapstoneRequest[] @relation("UserCapstoneRequests")
+  council_evalution  CouncilEvalution[]
 }
 
 model PasswordReset {
@@ -272,6 +274,7 @@ model Capstone {
   // Mối quan hệ tới bảng Lịch sử yêu cầu
   requests           CapstoneRequest[]
   submission         CapstoneSubmission[]
+  council_evalution  CouncilEvalution[]
 }
 
 model CapstoneRequest {
@@ -352,3 +355,15 @@ model CouncilMember {
   @@id([council_id, lecturer_id])
 }
 
+model CouncilEvalution {
+  evalution_id  BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  members_id    BigInt    @db.UnsignedBigInt
+  members       User      @relation(fields: [members_id], references: [user_id], onDelete: Cascade, onUpdate: Cascade)
+  capstone_id   BigInt    @db.UnsignedBigInt
+  capstone      Capstone  @relation(fields: [capstone_id], references: [capstone_id], onDelete: Cascade, onUpdate: Cascade)
+  grade         Float?     
+  lecturer_note String?  
+
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+  updated_at  DateTime? @updatedAt @db.Timestamp(0)
+}

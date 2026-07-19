@@ -111,7 +111,9 @@ export class CapstonesRequestService {
   
           // 1. Kiểm tra xem thực sự trong DB đã có bản ghi submission nào chưa cho chắc chắn
           const existingSubmissions = await tx.capstoneSubmission.findFirst({
-            where: { capstone_id: capstone.capstone_id }
+            where: { capstone_id: capstone.capstone_id },
+            orderBy: { milestone_id: 'asc' },
+            take: 4
           });
 
           // Nếu chưa từng có bản ghi nào thì mới tạo mới 4 giai đoạn

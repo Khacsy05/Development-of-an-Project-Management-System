@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `CapstoneSubmission` MODIFY `status` ENUM('PENDING', 'SUBMITTED', 'PASSED', 'FAILED') NOT NULL DEFAULT 'PENDING';

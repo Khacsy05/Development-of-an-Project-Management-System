@@ -46,11 +46,7 @@ async function main() {
     create: { role_id: 3n, role_name: UserRole.Student },
   });
 
-  const facultyRole = await prisma.role.upsert({
-    where: { role_name: UserRole.Faculty },
-    update: {},
-    create: { role_id: 4n, role_name: UserRole.Faculty },
-  });
+  
 
   const hashedPassword = await bcrypt.hash('password_da_ma_hoa_cho_nay', 10);
 
@@ -97,27 +93,6 @@ async function main() {
         email: `giangvien${i}@tlu.edu.vn`,
         fullname: `Giảng Viên Thử Nghiệm ${i}`,
         role_id: lecturerRole.role_id, // Gán quyền Giảng viên đã tạo ở bước trước
-      },
-    });
-  }
-  for (let i = 1; i <= 7; i++) {
-    const userId = 10n + BigInt(i);  
-    const facultyId = 1000n + BigInt(i - 1);              
-    const usercode = `HDK${String(i).padStart(3, '0')}`;
-    const username = `hdk_hoidongkhoa${i}`;           
-
-    await prisma.user.upsert({
-      where: { user_id: userId },
-      update: {},
-      create: {
-        user_id: userId,
-        usercode: usercode,
-        username: username,
-        password: hashedPassword,
-        faculty_id: facultyId,
-        email: `hoidongkhoa${i}@tlu.edu.vn`,
-        fullname: `Hội đồng khoa ${i}`,
-        role_id: facultyRole.role_id,
       },
     });
   }
@@ -509,39 +484,7 @@ async function main() {
   // 12. Hồ sơ Đồ án Tốt nghiệp (Capstones)
   // ==========================================
   // Tiến hành gán 5 sinh viên (2351170611n -> 2351170615n) làm 5 đề tài vừa tạo ở trên
-  for (let i = 1; i <= 5; i++) {
-    const currentStudentId = 2351170610n + BigInt(i);
-    const currentTopicId = BigInt(i);
-    // Gán xoay vòng GV hướng dẫn từ 1001n -> 1003n
-    const currentLecturerId = 1000n + BigInt((i % 3) + 1);
-    // Đứa thứ 1, 2, 3 gán vào hội đồng 1, đứa thứ 4, 5 gán hội đồng 2
-    const currentCouncilId = i <= 3 ? 1n : 2n;
-
-    await prisma.capstone.upsert({
-      where: { capstone_id: BigInt(i) },
-      update: {},
-      create: {
-        capstone_id: BigInt(i),
-        student_id: currentStudentId,
-        topic_id: currentTopicId,
-        faculty_id:1000,
-        lecturer_id: currentLecturerId,
-        semester_id: 8n, // Thuộc học kỳ đồ án (8)
-        council_id: currentCouncilId,
-        status: CapstoneStatus.DOING, // Trạng thái đang thực hiện đồ án mẫu
-        final_report_path: i === 5 ? null : `/uploads/reports/capstone_${i}_final.pdf`, // Sinh viên 5 chưa nộp bản cuối
-        instructor_grade: parseFloat((3.0 + Math.random()).toFixed(2)), // Tự sinh điểm hướng dẫn 3.0 -> 4.0
-        council_grade: parseFloat((3.0 + Math.random()).toFixed(2)),      // Tự sinh điểm hội đồng
-        defense_order: i, // Số thứ tự lên thớt thuyết trình
-      },
-    });
-
-    // Cập nhật lại đề tài này thành 'Đã có người chọn' (is_available = 0)
-    await prisma.topic.update({
-      where: { topic_id: currentTopicId },
-      data: { is_available: false },
-    });
-  }
+  
 
   console.log('✅ Seed dữ liệu thành công!');
 }

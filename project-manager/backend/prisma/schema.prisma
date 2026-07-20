@@ -79,7 +79,7 @@ model User {
   lecturer_capstones Capstone[]          @relation("LecturerCapstones")
   council_memberships CouncilMember[]     // Tham gia vào hội đồng
   capstone_requests CapstoneRequest[] @relation("UserCapstoneRequests")
-  council_evalution  CouncilEvalution[]
+  council_evalution  CouncilEvaluation[]
 }
 
 model PasswordReset {
@@ -274,7 +274,7 @@ model Capstone {
   // Mối quan hệ tới bảng Lịch sử yêu cầu
   requests           CapstoneRequest[]
   submission         CapstoneSubmission[]
-  council_evalution  CouncilEvalution[]
+  council_evalution  CouncilEvaluation[]
 }
 
 model CapstoneRequest {
@@ -355,7 +355,7 @@ model CouncilMember {
   @@id([council_id, lecturer_id])
 }
 
-model CouncilEvalution {
+model CouncilEvaluation {
   evalution_id  BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
   members_id    BigInt    @db.UnsignedBigInt
   members       User      @relation(fields: [members_id], references: [user_id], onDelete: Cascade, onUpdate: Cascade)

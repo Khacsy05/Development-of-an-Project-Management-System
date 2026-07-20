@@ -84,7 +84,7 @@ export class CapstonesSubmissionService {
         if (updatedCapstone.council_id) {
 
           // Check xem đã tạo phiếu chấm cho đồ án này lần nào chưa
-          const existingCouncilEvaluation = await tx.councilEvalution.findFirst({
+          const existingCouncilEvaluation = await tx.councilEvaluation.findFirst({
             where: { capstone_id: capstone.capstone_id }
           });
 
@@ -97,11 +97,10 @@ export class CapstonesSubmissionService {
             // Duyệt qua từng thành viên để tạo phiếu chấm điểm rỗng cho họ
             if (allMembers.length > 0) {
               const evaluationPromises = allMembers.map((member) => {
-                return tx.councilEvalution.create({
+                return tx.councilEvaluation.create({
                   data: {
                     capstone_id: capstone.capstone_id,
                     members_id: member.lecturer_id,
-                    
                   }
                 });
               });

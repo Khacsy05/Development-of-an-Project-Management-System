@@ -6,6 +6,7 @@ import { CapstoneQuery } from './dto/query-capstone.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AssignCouncilDto } from './dto/update-assignCouncil.dto';
 
 @Controller('capstones')
 
@@ -34,6 +35,17 @@ export class CapstonesController {
   @Roles("Student", "Lecturer")
   update(@Param('capstone_id') capstone_id: number, @Body() updateCapstoneDto: UpdateCapstoneDto, @Req() req: any) {
     return this.capstonesService.update(capstone_id, updateCapstoneDto,req);
+  }
+
+  @Patch(':id/assignCouncil')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("Lecturer")
+  assignCouncil(
+    @Param('id') id: number, 
+    @Body() assignCouncilDto: AssignCouncilDto,
+    @Req() req: any
+  ){
+    return this.capstonesService.assignCouncil(id, assignCouncilDto,req);
   }
 
   @Delete(':id')

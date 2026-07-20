@@ -1,8 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCapstoneDto } from './dto/create-capstone.dto';
 import { UpdateCapstoneDto } from './dto/update-capstone.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CapstoneQuery } from './dto/query-capstone.dto';
+import { AssignCouncilDto } from './dto/update-assignCouncil.dto';
+import { CapstoneStatus } from '@prisma/client';
 
 @Injectable()
 export class CapstonesService {
@@ -153,6 +155,68 @@ export class CapstonesService {
 
         
       return updatedCapstone;
+    })
+  }
+
+  async assignCouncil(id: number, assignCouncilDto: AssignCouncilDto, req: any){
+    const {council_id} = assignCouncilDto
+    const councilBigInt = BigInt(council_id)
+    const capstoneBigInt = BigInt(id)
+    const user = req.user
+    const capstone = await this.prisma.capstone.findUnique({
+      where: { capstone_id: capstoneBigInt },
+      include: {faculty: true}
+    });
+
+    if(String(user.id) !== String(capstone?.faculty.dean_id)){
+      throw new BadRequestException('Bạn không phải giảng viên được chỉ định trong yêu cầu này');
+    }
+
+    if (!capstone) {
+      throw new NotFoundException('Không tìm thấy đồ án tốt nghiệp');
+    }
+
+    // 2. Validation nghiệp vụ: Đồ án phải đủ điều kiện bảo vệ
+    if (capstone.status !== CapstoneStatus.DEFENSE_ELIGIBLE) {
+      throw new BadRequestException('Đồ án chưa đủ điều kiện bảo vệ để gán Hội đồng');
+    }
+    const council = await this.prisma.council.findUnique({
+    where: { council_id: councilBigInt },
+      include: { members: true },
+    });
+
+    if (!council) {
+      throw new NotFoundException('Hội đồng được chỉ định không tồn tại');
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const capstoneUpdate = await tx.capstone.update({
+        where: {
+          capstone_id: capstoneBigInt
+        },
+        data: {council_id: councilBigInt}
+      })
+
+      const councilEvaluation =await tx.councilEvaluation.findFirst({
+        where : {
+          capstone_id : capstoneBigInt
+        }
+      })
+      if(!councilEvaluation){
+        const allMembers = council.members;
+        if (allMembers.length > 0) {
+          const evaluationPromises = allMembers.map((member) => {
+            return tx.councilEvaluation.create({
+              data: {
+                capstone_id: capstoneBigInt,
+                members_id: member.lecturer_id,
+              }
+            });
+          });
+
+          await Promise.all(evaluationPromises);
+        }
+      }
+      return capstoneUpdate
     })
   }
 

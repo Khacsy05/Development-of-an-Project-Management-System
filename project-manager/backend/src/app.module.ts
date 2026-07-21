@@ -15,6 +15,7 @@ import { CapstonesSubmissionModule } from './modules/capstones-submission/capsto
 import { CouncilEvalutionModule } from './modules/councils-evaluation/councils-evaluation.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { CouncilsMembersModule } from './modules/councils-members/councils-members.module';
 
 @Module({
   
@@ -23,7 +24,7 @@ import { join } from 'path';
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads', // Đường dẫn tĩnh trên URL
     }),
-    PrismaModule, FacultiesModule, TopicModule, UsersModule, ClassesModule, AcademicYearsModule, CapstonesModule, CouncilsModule, AuthModule, CapstonesRequestModule, CapstonesSubmissionModule, CouncilEvalutionModule],
+    PrismaModule, FacultiesModule, TopicModule, UsersModule, ClassesModule, AcademicYearsModule, CapstonesModule, CouncilsModule, AuthModule, CapstonesRequestModule, CapstonesSubmissionModule, CouncilEvalutionModule, CouncilsMembersModule],
   controllers: [AppController],
   providers: [AppService],
 })

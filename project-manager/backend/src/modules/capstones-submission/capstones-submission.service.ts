@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCapstonesSubmissionDto } from './dto/create-capstones-submission.dto';
 import { UpdateCapstonesSubmissionDto } from './dto/update-capstones-submission.dto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -19,7 +19,7 @@ export class CapstonesSubmissionService {
     return `This action returns a #${id} capstonesSubmission`;
   }
 
-  async update(id: number, updateCapstonesSubmissionDto: UpdateCapstonesSubmissionDto) {
+  async update(id: number, updateCapstonesSubmissionDto: UpdateCapstonesSubmissionDto,req: any) {
     const {
       status,
       student_note,
@@ -27,19 +27,34 @@ export class CapstonesSubmissionService {
       grade,
       file_path
     } = updateCapstonesSubmissionDto;
-
+    const user = req.user
     const submissionIdBigint = BigInt(id);
 
     // 1. Tìm bản ghi submission kèm cả thông tin milestone và capstone
     const capstoneSubmis = await this.prisma.capstoneSubmission.findUnique({
       where: { submission_id: submissionIdBigint },
-      include: { capstone: true }
+      include: { 
+        capstone: true,
+        milestone: true 
+      }
     });
+
+    
 
     if (!capstoneSubmis || !capstoneSubmis.capstone) {
       throw new NotFoundException('Không tìm thấy lượt nộp bài hoặc đồ án liên quan');
     }
+    if(user.role === "Student"){
+      const now = new Date()
+      const deadLine = new Date(capstoneSubmis.milestone.deadline);
 
+      if(now > deadLine){
+        throw new BadRequestException(
+          `Đã quá hạn nộp bài! Hạn cuối là: ${deadLine.toLocaleString('vi-VN')}`
+        );
+      }
+    }
+    
     const capstone = capstoneSubmis.capstone;
 
     return await this.prisma.$transaction(async (tx) => {

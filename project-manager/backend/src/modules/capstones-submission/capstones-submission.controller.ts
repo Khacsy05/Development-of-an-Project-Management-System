@@ -35,6 +35,7 @@ export class CapstonesSubmissionController {
     @Param('id') id: string, 
     @Body() updateCapstonesSubmissionDto: UpdateCapstonesSubmissionDto,
     @UploadedFile() file: Express.Multer.File,
+    @Req() req: any
   ) {
     // 1. Tạo đường dẫn tương đối nếu người dùng có upload file
     if (file) {
@@ -42,7 +43,7 @@ export class CapstonesSubmissionController {
     }
 
     // 2. Truyền đúng 2 đối số vào hàm Service: (+id và dto)
-    return this.capstonesSubmissionService.update(+id, updateCapstonesSubmissionDto);
+    return this.capstonesSubmissionService.update(+id, updateCapstonesSubmissionDto,req);
   }
 
   @Delete(':id')

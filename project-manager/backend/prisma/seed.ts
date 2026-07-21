@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { PrismaClient, UserRole, CapstoneStatus } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import 'dotenv/config';
 
@@ -213,10 +213,10 @@ async function main() {
   }
 
   const danhSachNamHoc = [
-    { year_name: '2022-2023', star_year: 2022, end_year: 2023 },
     { year_name: '2023-2024', star_year: 2023, end_year: 2024 },
     { year_name: '2024-2025', star_year: 2024, end_year: 2025 },
     { year_name: '2025-2026', star_year: 2025, end_year: 2026 },
+    { year_name: '2026-2027', star_year: 2026, end_year: 2027 },
   ];
   for (let index = 0; index < danhSachNamHoc.length; index++) {
     const nextAcademicYearId = 1n + BigInt(index); // Sẽ sinh ra: 1n, 2n, 3n, 4n...
@@ -239,14 +239,14 @@ async function main() {
   }
 
   const danhSachHocKy = [
-    { targetYearName: '2022-2023', semester_name: 'Học kỳ 1', startMonthDay: '09-01', endMonthDay: '01-15' },
-    { targetYearName: '2022-2023', semester_name: 'Học kỳ 2', startMonthDay: '02-01', endMonthDay: '06-30' },
-    { targetYearName: '2023-2024', semester_name: 'Học kỳ 3', startMonthDay: '09-01', endMonthDay: '01-15' },
-    { targetYearName: '2023-2024', semester_name: 'Học kỳ 4', startMonthDay: '02-01', endMonthDay: '06-30' },
-    { targetYearName: '2024-2025', semester_name: 'Học kỳ 5', startMonthDay: '09-01', endMonthDay: '01-15' },
-    { targetYearName: '2024-2025', semester_name: 'Học kỳ 6', startMonthDay: '02-01', endMonthDay: '06-30' },
-    { targetYearName: '2025-2026', semester_name: 'Học kỳ 7', startMonthDay: '09-01', endMonthDay: '1-15' },
-    { targetYearName: '2025-2026', semester_name: 'Học kỳ 8', startMonthDay: '02-01', endMonthDay: '06-30' },
+    { targetYearName: '2023-2024', semester_name: 'Học kỳ 1', startMonthDay: '09-01', endMonthDay: '01-15' },
+    { targetYearName: '2023-2024', semester_name: 'Học kỳ 2', startMonthDay: '02-01', endMonthDay: '06-30' },
+    { targetYearName: '2024-2025', semester_name: 'Học kỳ 3', startMonthDay: '09-01', endMonthDay: '01-15' },
+    { targetYearName: '2024-2025', semester_name: 'Học kỳ 4', startMonthDay: '02-01', endMonthDay: '06-30' },
+    { targetYearName: '2025-2026', semester_name: 'Học kỳ 5', startMonthDay: '09-01', endMonthDay: '01-15' },
+    { targetYearName: '2025-2026', semester_name: 'Học kỳ 6', startMonthDay: '02-01', endMonthDay: '06-30' },
+    { targetYearName: '2026-2027', semester_name: 'Học kỳ 7', startMonthDay: '09-01', endMonthDay: '1-15' },
+    { targetYearName: '2026-2027', semester_name: 'Học kỳ 8', startMonthDay: '02-01', endMonthDay: '06-30' },
   ];
 
   for (let index = 0; index < danhSachHocKy.length; index++) {

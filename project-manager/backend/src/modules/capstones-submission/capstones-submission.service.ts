@@ -94,9 +94,9 @@ export class CapstonesSubmissionService {
 
       // 5. BẮT SỰ KIỆN: Nếu đồ án CHUYỂN SANG DEFENSE_ELIGIBLE -> Đẻ sẵn các bản ghi cho Hội đồng chấm
       if (capstone.status !== CapstoneStatus.DEFENSE_ELIGIBLE && nextStatus === CapstoneStatus.DEFENSE_ELIGIBLE) {
-        
+        const councilId = updatedCapstone.council_id;
         // Kiểm tra an toàn: Đồ án phải được gán council_id trước đó thì mới đẻ phiếu chấm được
-        if (updatedCapstone.council_id) {
+        if (councilId) {
 
           // Check xem đã tạo phiếu chấm cho đồ án này lần nào chưa
           const existingCouncilEvaluation = await tx.councilEvaluation.findFirst({
@@ -106,7 +106,7 @@ export class CapstonesSubmissionService {
           if (!existingCouncilEvaluation) {
             // Lấy tất cả thành viên thuộc Hội đồng này ra
             const allMembers = await tx.councilMember.findMany({
-              where: { council_id: updatedCapstone.council_id }
+              where: { council_id: councilId }
             });
 
             // Duyệt qua từng thành viên để tạo phiếu chấm điểm rỗng cho họ
@@ -116,6 +116,7 @@ export class CapstonesSubmissionService {
                   data: {
                     capstone_id: capstone.capstone_id,
                     members_id: member.lecturer_id,
+                    council_id: councilId
                   }
                 });
               });

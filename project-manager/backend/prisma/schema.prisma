@@ -276,6 +276,8 @@ model Capstone {
   requests           CapstoneRequest[]
   submission         CapstoneSubmission[]
   council_evalution  CouncilEvaluation[]
+
+  @@unique([topic_id, semester_id])
 }
 
 model CapstoneRequest {
@@ -341,6 +343,7 @@ model Council {
   
   capstones   Capstone[]
   members     CouncilMember[]
+  council_evalution  CouncilEvaluation[]
 }
 
 // ==========================================
@@ -359,6 +362,8 @@ model CouncilMember {
 }
 
 model CouncilEvaluation {
+  council_id    BigInt    @db.UnsignedBigInt
+  council       Council   @relation(fields: [council_id], references: [council_id], onDelete: Cascade, onUpdate: Cascade)
   evalution_id  BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
   members_id    BigInt    @db.UnsignedBigInt
   members       User      @relation(fields: [members_id], references: [user_id], onDelete: Cascade, onUpdate: Cascade)

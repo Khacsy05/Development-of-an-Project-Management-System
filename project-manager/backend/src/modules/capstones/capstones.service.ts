@@ -181,7 +181,7 @@ export class CapstonesService {
       throw new BadRequestException('Đồ án chưa đủ điều kiện bảo vệ để gán Hội đồng');
     }
     const council = await this.prisma.council.findUnique({
-    where: { council_id: councilBigInt },
+      where: { council_id: councilBigInt },
       include: { members: true },
     });
 
@@ -209,6 +209,7 @@ export class CapstonesService {
               data: {
                 capstone_id: capstoneBigInt,
                 members_id: member.lecturer_id,
+                council_id: councilBigInt
               }
             });
           });

@@ -7,7 +7,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class CouncilsService {
   constructor(private prisma: PrismaService) {}
   async create(createCouncilDto: CreateCouncilDto) {
-    const {semester_id,rooms,buildings,faculty_id,name} = createCouncilDto
+    const {semester_id,rooms,buildings,faculty_id,name,start_date,end_date} = createCouncilDto
+    const formattedStartDate = new Date(start_date.replace(' ', 'T'));
+    const formattedEndDate = new Date(end_date.replace(' ', 'T'));
     const currentSemester = await this.prisma.semester.findUnique({
       where: {
         semester_id: BigInt(semester_id),
@@ -26,6 +28,8 @@ export class CouncilsService {
         name: name,
         rooms: rooms,
         semester_id: BigInt(semester_id),
+        start_date: formattedStartDate,
+        end_date:formattedEndDate
       }
     });
   }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Req } from '@nestjs/common';
 import { TopicService } from './topics.service';
 import { CreateTopicDto } from './dto/create-topic.dto';
 import { UpdateTopicDto } from './dto/update-topic.dto';
@@ -14,8 +14,10 @@ export class TopicController {
   constructor(private readonly topicService: TopicService) {}
 
   @Post()
-  create(@Body() createTopicDto: CreateTopicDto) {
-    return this.topicService.create(createTopicDto);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("Lecturer", "Student","Admin")
+  create(@Body() createTopicDto: CreateTopicDto,@Req() req:any) {
+    return this.topicService.create(createTopicDto,req);
   }
 
   @Get()
@@ -29,8 +31,17 @@ export class TopicController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTopicDto: UpdateTopicDto) {
-    return this.topicService.update(+id, updateTopicDto);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("Lecturer")
+  update(@Param('id') id: string, @Body() updateTopicDto: UpdateTopicDto,@Req() req:any) {
+    return this.topicService.update(+id, updateTopicDto,req);
+  }
+
+  @Patch(':id/approved')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("Lecturer")
+  approvedTopic(@Param('id') id: string, @Body() updateTopicDto: UpdateTopicDto,@Req() req:any) {
+    return this.topicService.approvedTopic(+id, updateTopicDto,req);
   }
 
   @Delete(':id')

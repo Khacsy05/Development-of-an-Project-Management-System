@@ -26,18 +26,35 @@ export class CouncilEvalutionService {
     const councilEvaluation = await this.prisma.councilEvaluation.findUnique({
       where: {evalution_id: evalutionBigInt},
       include: {
-        capstone: {
+        capstone: true,
+        council: {
           include: {
-            council: {
-              include: {members: true}
-            }
+            members: true
           }
-        }
+        },
       }
     })
-    if (!councilEvaluation || !councilEvaluation.capstone) {
-    throw new NotFoundException('Phiếu đánh giá hội đồng không tồn tại');
-  }
+    if (!councilEvaluation || !councilEvaluation.capstone || !councilEvaluation.council) {
+      throw new NotFoundException('Phiếu đánh giá hội đồng không tồn tại');
+    }
+    const council = councilEvaluation.council;
+
+// 1. Kiểm tra nếu Council chưa được thiết lập thời gian bảo vệ
+    if (!council.start_date || !council.end_date) {
+      throw new BadRequestException('Hội đồng này chưa được thiết lập thời gian bảo vệ!');
+    }
+
+    const now = new Date();
+
+    // Sau khi đã check !start_date ở trên, TypeScript sẽ tự hiểu start_date CHẮC CHẮN không null
+    if (now < council.start_date) {
+      throw new BadRequestException('Chưa đến thời gian bắt đầu bảo vệ!');
+    }
+
+    if (now > council.end_date) {
+      throw new BadRequestException('Đã hết thời gian nhập điểm cho hội đồng này!');
+    }
+
     if(String(user.id) !== String(councilEvaluation?.members_id)){
       throw new BadRequestException('Bạn không phải giảng viên được chỉ định trong hội đồng này');
     }
@@ -61,7 +78,7 @@ export class CouncilEvalutionService {
         }
       });
 
-      const totalMembers = councilEvaluation?.capstone?.council?.members.length;
+      const totalMembers = councilEvaluation?.council?.members.length;
 
       if(allEvaluations.length === totalMembers){
 

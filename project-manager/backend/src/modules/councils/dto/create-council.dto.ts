@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsDateString, IsNotEmpty, IsString } from "class-validator";
 
 export class CreateCouncilDto {
     @IsNotEmpty()
@@ -21,5 +21,11 @@ export class CreateCouncilDto {
     @IsString()
     rooms!: string; 
 
-     
+    @IsNotEmpty({ message: 'Vui lòng chọn thời gian bắt đầu' })
+    @IsDateString({}, { message: 'start_date phải đúng định dạng ISO Date (YYYY-MM-DDTHH:mm:ssZ)' })
+    start_date!: string;
+
+    @IsNotEmpty({ message: 'Vui lòng chọn thời gian kết thúc' })
+    @IsDateString({}, { message: 'end_date phải đúng định dạng ISO Date (YYYY-MM-DDTHH:mm:ssZ)' })
+    end_date!: string;
 }

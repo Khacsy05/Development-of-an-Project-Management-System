@@ -7,16 +7,22 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(cookieParser());
   app.setGlobalPrefix('api');
+
   (BigInt.prototype as any).toJSON = function () {
     return this.toString();
   };
-  app.enableCors();
-  await app.listen(process.env.PORT ?? 3000);
+  
+  app.enableCors({
+    origin: process.env.FRONTEND_URL, // Đăng ký địa chỉ của Next.js
+    credentials: true,
+  });
+  await app.listen(process.env.PORT ?? 3001);
+  console.log(`Backend đang chạy tại: ${process.env.PORT}`);
   app.useGlobalPipes(
-  new ValidationPipe({
-    transform: true,
-    whitelist: true,
-  }),
-);
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+    }),
+  );
 }
 bootstrap();

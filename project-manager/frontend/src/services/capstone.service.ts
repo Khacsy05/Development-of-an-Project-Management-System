@@ -1,22 +1,14 @@
-import { CapstoneStatus } from '../generated/prisma';
-import { prisma } from '../../../backend/src/lib/prisma';
+import { GetCapstonesQueryDto } from "@/type/capstone";
+import { api } from "@/lib/api";
 
-function serialize(data: any) {
-    return JSON.parse(JSON.stringify(data, (_, v) => typeof v === 'bigint' ? v.toString() : v));
-}
-
-export async function getCapstoneList(status?: CapstoneStatus) {
-    const rawData = await prisma.capstone.findMany({
-        where: { status },
-        include: {
-            student: { select: { usercode: true, fullname: true} },
-            topic: { select: { title: true } },
-            lecturer: { select: { usercode: true, fullname: true } },
-        },
-        orderBy: [
-            { created_at: 'desc' },
-            { capstone_id: 'desc' }
-        ]
-    });
-    return serialize(rawData);
+export async function getCapstoneList(query?: GetCapstonesQueryDto) {
+    try {
+        const response = await api.get('/capstones', {
+            params: query,
+        });   
+        return response.data
+    } catch (error) {
+        console.error('Lỗi khi lấy danh sách đồ án:', error);
+        throw error;
+    }
 }

@@ -9,7 +9,7 @@ const secretKey = new TextEncoder().encode(JWT_SECRET);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = request.cookies.get('token')?.value;
+  const token = request.cookies.get('accessToken')?.value;
 
   // 1. GIAO DIỆN
   const isAuthRoute = pathname.startsWith('/login');

@@ -1,0 +1,54 @@
+services:
+  # 1. DATABASE (MySQL)
+  db:
+    image: mysql:latest
+    container_name: mysql-doan
+    restart: always
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'true'
+      MYSQL_DATABASE: quan_ly_do_an
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql # Giữ lại dữ liệu DB khi tắt container
+
+  # 2. BACKEND (NestJS)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: nestjs-backend
+    restart: always
+    ports:
+      - "3001:3001" # Host:Container (Nếu port 3001 ở máy thật bận thì đổi port bên ngoài)
+    environment:
+      # Chuỗi kết nối DB (Dùng host 'db' thay vì 'localhost')
+      DATABASE_URL: "mysql://root:@db:3306/quan_ly_do_an"
+      PORT: 3001
+    volumes:
+      - ./backend:/app # Mount code từ máy thật vào container để Hot Reload
+      - /app/node_modules # Giữ nguyên node_modules của Linux container
+    depends_on:
+      - db # Bật MySQL trước rồi mới bật Backend
+
+  # 3. FRONTEND (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: nextjs-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:3001/api"
+    volumes:
+      - ./frontend:/app # Mount code từ máy thật vào container để Hot Reload
+      - /app/node_modules # Giữ nguyên node_modules của Linux container
+      - /app/.next # Giữ nguyên folder build của Next.js
+    depends_on:
+      - backend
+
+# Khai báo vùng lưu trữ dữ liệu bền vững cho MySQL
+volumes:
+  mysql_data:

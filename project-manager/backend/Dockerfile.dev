@@ -1,0 +1,18 @@
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Chỉ copy package.json để tận dụng Docker Cache
+COPY package*.json ./
+
+RUN npm install
+
+# Copy toàn bộ code
+COPY . .
+
+# Sinh mã Prisma Client cho Linux container
+RUN npx prisma generate
+
+EXPOSE 3001
+
+CMD ["sh", "-c", "npx prisma generate && npm run start:dev"]

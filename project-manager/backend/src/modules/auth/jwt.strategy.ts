@@ -8,13 +8,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     super({
       // 1. Tự động bóc tách Token từ Header "Authorization: Bearer <token>"
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      
+
       // 2. Không chấp nhận các token đã hết hạn
       ignoreExpiration: false,
-      
+
       // 3. Khóa bí mật dùng để giải mã và xác thực chữ ký của Token
       // ⚠️ Lưu ý: Thay chuỗi này bằng chuỗi Secret Key thực tế mà bạn dùng khi tạo Token lúc Login
-      secretOrKey: process.env.JWT_SECRET || "SECRET_KEY", 
+      secretOrKey: process.env.JWT_ACCESS_SECRET || "ACCESS_SECRET_KEY",
     });
   }
 

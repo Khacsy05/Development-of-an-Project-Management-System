@@ -46,7 +46,7 @@ async function main() {
     create: { role_id: 3n, role_name: UserRole.Student },
   });
 
-  
+
 
   const hashedPassword = await bcrypt.hash('password_da_ma_hoa_cho_nay', 10);
 
@@ -62,7 +62,7 @@ async function main() {
 
   for (let index = 0; index < danhSachFaculty.length; index++) {
     const faculty = danhSachFaculty[index];
-    const falcultyId = 1000n + BigInt(index); 
+    const falcultyId = 1000n + BigInt(index);
     await prisma.faculty.upsert({
       where: { faculty_code: faculty.faculty_code },
       update: {},
@@ -99,16 +99,16 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { user_id: 1n },
-      update: {},
-      create: {
-        user_id: 1n,
-        usercode: "ADMIN001",
-        username: "admin",
-        password: hashedPassword,
-        email: "admin@tlu.edu.vn",
-        fullname: "Quản trị viên",
-        role_id: adminRole.role_id, // Gán quyền Quản trị viên đã tạo ở bước trước
-      },
+    update: {},
+    create: {
+      user_id: 1n,
+      usercode: "ADMIN001",
+      username: "admin",
+      password: hashedPassword,
+      email: "admin@tlu.edu.vn",
+      fullname: "Quản trị viên",
+      role_id: adminRole.role_id, // Gán quyền Quản trị viên đã tạo ở bước trước
+    },
   })
 
   // 4. Tạo Chuyên ngành và Lớp học
@@ -197,6 +197,7 @@ async function main() {
         email: `student${i}@e.tlu.edu.vn`,
         fullname: `Sinh Viên Thử Nghiệm ${i}`,
         role_id: studentRole.role_id,
+        faculty_id: 1000n,
       },
     });
     const randomClassId = BigInt((i % 6) + 1);
@@ -484,7 +485,7 @@ async function main() {
   // 12. Hồ sơ Đồ án Tốt nghiệp (Capstones)
   // ==========================================
   // Tiến hành gán 5 sinh viên (2351170611n -> 2351170615n) làm 5 đề tài vừa tạo ở trên
-  
+
 
   console.log('✅ Seed dữ liệu thành công!');
 }

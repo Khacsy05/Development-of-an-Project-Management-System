@@ -1,11 +1,12 @@
+import apiClient from "@/lib/apiClient";
 import { GetCapstonesQueryDto } from "@/type/capstone";
-import { api } from "@/lib/api";
 
-export async function getCapstoneList(query?: GetCapstonesQueryDto) {
+
+export async function getCapstoneLists(query?: GetCapstonesQueryDto) {
     try {
-        const response = await api.get('/capstones', {
+        const response = await apiClient.get('/capstones', {
             params: query,
-        });   
+        });
         return response.data
     } catch (error) {
         console.error('Lỗi khi lấy danh sách đồ án:', error);

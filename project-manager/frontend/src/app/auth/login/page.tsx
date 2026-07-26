@@ -1,14 +1,24 @@
 'use client'
 import React, { useState } from 'react'
-import { useRouter } from 'next/navigation';
 import { loginUser } from '@/services/auth.service';
 import { toast } from 'sonner'; // Sử dụng thư viện toast có sẵn trong project của em
-
+import { useRouter, useSearchParams } from 'next/navigation';
 const Login = () => { // 🌟 Sửa tên component viết hoa chữ cái đầu
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false); // 🌟 Thêm loading state chống spam click
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const getSafeCallbackUrl = (urlParam: string | null, fallback = '/dashboard') => {
+    if (!urlParam) return fallback;
+
+    // Chỉ chấp nhận đường dẫn tương đối bắt đầu bằng / (ví dụ: /dashboard, /profile)
+    // Bỏ qua các URL bắt đầu bằng // (protocol-relative URL nguy hiểm)
+    const isRelative = urlParam.startsWith('/') && !urlParam.startsWith('//');
+
+    return isRelative ? urlParam : fallback;
+  };
 
   const fetchLogin = async () => {
     setIsLoading(true);
@@ -19,12 +29,12 @@ const Login = () => { // 🌟 Sửa tên component viết hoa chữ cái đầu
       toast.success('Đăng nhập thành công! Đang chuyển hướng...');
 
       // Đọc callbackUrl từ query parameters, nếu không có thì mặc định về /dashboard
-      const params = new URLSearchParams(window.location.search);
-      const callbackUrl = params.get('callbackUrl') || '/dashboard';
+      const rawCallback = searchParams.get('callbackUrl');
+      const safeCallbackUrl = getSafeCallbackUrl(rawCallback, '/dashboard');
 
       // Chuyển hướng sau một khoảng trễ ngắn để người dùng kịp nhìn thấy Toast thành công
       setTimeout(() => {
-        window.location.href = callbackUrl;
+        window.location.href = safeCallbackUrl;
       }, 1000);
     } catch (error: any) {
       // Lấy thông báo lỗi chi tiết từ backend nếu có

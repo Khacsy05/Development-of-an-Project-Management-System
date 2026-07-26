@@ -7,28 +7,51 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'day_la_khoa_rat_bi
 const secretKey = new TextEncoder().encode(JWT_REFRESH_SECRET);
 
 export async function middleware(request: NextRequest) {
-  const {pathname} = request.nextUrl;
+  const { pathname } = request.nextUrl;
   const refreshToken = request.cookies.get("refreshToken")?.value
   const isAuthRouter = pathname.startsWith('/auth/login')
   const isProtectedRouter = pathname.startsWith("/dashboard") || pathname.startsWith('/admin');
   const isAdminRoute = pathname.startsWith('/admin');
 
-  if(isProtectedRouter && !refreshToken){
-    const loginUrl = new URL('/auth/login',request.url);
-    loginUrl.searchParams.set('callbackUrl',pathname)
+  if (isProtectedRouter && !refreshToken) {
+    const loginUrl = new URL('/auth/login', request.url);
+    loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
   }
-  if(refreshToken){
+  if (refreshToken) {
     try {
-      const {payload} = await jwtVerify(refreshToken,secretKey)
+      const { payload } = await jwtVerify(refreshToken, secretKey)
       const userRole = payload.role as string
 
-      if(isAuthRouter){
+      if (isAuthRouter) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
 
-      if(isAdminRoute && userRole !== "Admin"){
+      if (isAdminRoute && userRole !== "Admin") {
         return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+
+      if (userRole == "Student" && pathname.startsWith('/dashboard/lecturer')) {
+        return NextResponse.redirect(new URL('/dashboard/student', request.url))
+      }
+      if (userRole == "Student" && pathname.startsWith('/dashboard/admin')) {
+        return NextResponse.redirect(new URL('/dashboard/student', request.url))
+      }
+      // Giảng viên không được vào phân vùng của Sinh viên
+      if (userRole == "Lecturer" && pathname.startsWith('/dashboard/student')) {
+        return NextResponse.redirect(new URL('/dashboard/lecturer', request.url))
+      }
+      if (userRole == "Lecturer" && pathname.startsWith('/dashboard/admin')) {
+        return NextResponse.redirect(new URL('/dashboard/lecturer', request.url))
+      }
+
+      if (userRole == "Student" && pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/student')) {
+        const subPath = pathname.substring('/dashboard'.length);
+        return NextResponse.redirect(new URL(`/dashboard/student${subPath}`, request.url))
+      }
+      if (userRole == "Lecturer" && pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/lecturer')) {
+        const subPath = pathname.substring('/dashboard'.length);
+        return NextResponse.redirect(new URL(`/dashboard/lecturer${subPath}`, request.url))
       }
 
     } catch (error) {

@@ -1,9 +1,9 @@
 import React from 'react'
 
 const page = () => {
-  return (
-    <div>page capstones</div>
-  )
+    return (
+        <div>page GV</div>
+    )
 }
 
 export default page

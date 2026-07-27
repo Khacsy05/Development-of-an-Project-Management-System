@@ -28,5 +28,16 @@ export class AuthController {
       return this.authService.refreshTokens(request,response)
   }
 
+  @Post('logout')
+  logout(@Res({ passthrough: true }) response: Express.Response) {
+    response.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
+    return { message: 'Đăng xuất thành công' };
+  }
+
 }
  

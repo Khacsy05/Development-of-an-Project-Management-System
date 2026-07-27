@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { CapstoneStatus, PrismaClient, UserRole } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import 'dotenv/config';
 
@@ -92,7 +92,9 @@ async function main() {
         password: hashedPassword,
         email: `giangvien${i}@tlu.edu.vn`,
         fullname: `Giảng Viên Thử Nghiệm ${i}`,
-        role_id: lecturerRole.role_id, // Gán quyền Giảng viên đã tạo ở bước trước
+        role_id: lecturerRole.role_id, // Gán quyền Giảng viên đã tạo ở bước trước,
+        faculty_id: 1000n
+
       },
     });
   }
@@ -213,6 +215,23 @@ async function main() {
     });
   }
 
+  for (let i = 1; i < 5; i++) {
+    const capstoneId = 1n + BigInt(i);
+    const userId = 2351170610n + BigInt(i);
+    await prisma.capstone.upsert({
+      where: { capstone_id: capstoneId },
+      update: {},
+      create: {
+        capstone_id: capstoneId,
+        student_id: userId,
+        faculty_id: 1000n,
+        semester_id: 8,
+        status: CapstoneStatus.PENDING,
+
+      }
+    })
+  }
+
   const danhSachNamHoc = [
     { year_name: '2023-2024', star_year: 2023, end_year: 2024 },
     { year_name: '2024-2025', star_year: 2024, end_year: 2025 },
@@ -281,6 +300,7 @@ async function main() {
       },
     });
   }
+
 
   // ==========================================
   // 6. Tạo Mốc thời gian nộp bài (Milestones)

@@ -1,14 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
 import { CapstonesRequestService } from './capstones-request.service';
 import { CreateCapstonesRequestDto } from './dto/create-capstones-request.dto';
 import { UpdateCapstonesRequestDto } from './dto/update-capstones-request.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CapstoneRequestQuery } from './dto/query-capstone-request.dto';
 
 @Controller('capstones-request')
 export class CapstonesRequestController {
-  constructor(private readonly capstonesRequestService: CapstonesRequestService) {}
+  constructor(private readonly capstonesRequestService: CapstonesRequestService) { }
 
   @Post()
   create(@Body() createCapstonesRequestDto: CreateCapstonesRequestDto) {
@@ -16,8 +17,8 @@ export class CapstonesRequestController {
   }
 
   @Get()
-  findAll() {
-    return this.capstonesRequestService.findAll();
+  findAll(@Query("") query: CapstoneRequestQuery) {
+    return this.capstonesRequestService.findAll(query);
   }
 
   @Get(':id')

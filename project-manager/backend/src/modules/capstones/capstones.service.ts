@@ -8,16 +8,16 @@ import { CapstoneStatus } from '@prisma/client';
 
 @Injectable()
 export class CapstonesService {
-  constructor(private prisma : PrismaService){}
+  constructor(private prisma: PrismaService) { }
   async create(createCapstoneDto: CreateCapstoneDto, req: any) {
-    const {} = createCapstoneDto
+    const { } = createCapstoneDto
     const user = req.user as any;
     const studentIdBigInt = BigInt(user.id);
     const student = await this.prisma.user.findUnique({
       where: {
         user_id: studentIdBigInt
       },
-      include: {faculty: true}
+      include: { faculty: true }
     })
     const currentSemester = await this.prisma.semester.findFirst({
       where: {
@@ -25,7 +25,7 @@ export class CapstonesService {
         end_date: { gte: new Date() }
       }
     });
-    if(!currentSemester) {
+    if (!currentSemester) {
       throw new BadRequestException("Hiện tại không nằm trong thời gian của học kỳ nào được cấu hình!");
     }
     const existingCapstone = await this.prisma.capstone.findUnique({
@@ -34,56 +34,56 @@ export class CapstonesService {
       }
     })
 
-    if(existingCapstone){
+    if (existingCapstone) {
       throw new BadRequestException('Mỗi sinh viên chỉ được phép đăng ký duy nhất 1 đồ án!');
     }
 
     return await this.prisma.capstone.create({
       data: {
-        student_id : studentIdBigInt,
-        semester_id : currentSemester.semester_id,
+        student_id: studentIdBigInt,
+        semester_id: currentSemester.semester_id,
         faculty_id: student!.faculty!.faculty_id
       }
     })
   }
 
-  async findAll(query : CapstoneQuery) {
-    const {status,page,limit} = query
-    const pageNumber = Math.max(1,Number(page) || 1)
-    const limitNumber = Math.max(1,Number(limit) || 6)
-    const skip = (pageNumber-1) * limitNumber
-    
+  async findAll(query: CapstoneQuery) {
+    const { status, page, limit } = query
+    const pageNumber = Math.max(1, Number(page) || 1)
+    const limitNumber = Math.max(1, Number(limit) || 6)
+    const skip = (pageNumber - 1) * limitNumber
+
     const where = {
-        status : status? status : undefined
+      status: status ? status : undefined
     }
 
-    const [capstone,total] = await this.prisma.$transaction([
+    const [capstone, total] = await this.prisma.$transaction([
       this.prisma.capstone.findMany({
         where,
         skip,
-        take:limitNumber,
+        take: limitNumber,
         orderBy: [
           {
             created_at: 'desc',
           },
           {
-            capstone_id : "desc"
+            capstone_id: "desc"
           }
         ]
       }),
-      this.prisma.capstone.count({where})
+      this.prisma.capstone.count({ where })
     ])
 
-    return{
-      
-        data: capstone,
-        pagination: {
-          page: pageNumber,
-          limit: limitNumber,
-          total,
-          totalPages: Math.ceil(total / limitNumber),
-        },
-      
+    return {
+
+      data: capstone,
+      pagination: {
+        page: pageNumber,
+        limit: limitNumber,
+        total,
+        totalPages: Math.ceil(total / limitNumber),
+      },
+
     }
   }
 
@@ -104,71 +104,101 @@ export class CapstonesService {
       message,
     } = updateCapstoneDto
     const capstoneIdBigInt = BigInt(capstone_id)
+    const user = req.user as any
     const capstone = await this.prisma.capstone.findUnique({
-      where : {
+      where: {
         capstone_id: capstoneIdBigInt
       },
       include: {
         faculty: true
       }
     })
-    if(!capstone){
+    if (!capstone) {
       throw new BadRequestException('Hồ sơ đồ án không tồn tại');
     }
+    if (String(user.id) !== String(capstone.student_id) || user.role !== 'Student') {
+      throw new BadRequestException('Bạn không có quyền sửa đồ án này');
+    }
     return await this.prisma.$transaction(async (tx) => {
-        const updateData: any = {
-          status: lecturer_id ? 'PENDING_LECTURER' : (topic_id ? 'PENDING_FACULTY' : status),
-          defense_order,
-          final_report_path,
-          instructor_grade,
-          council_grade,
-          council_id: council_id ? BigInt(council_id) : undefined,
-        };
-        
-        const updatedCapstone = await tx.capstone.update({
-          where: {
-            capstone_id: capstoneIdBigInt
-          },
-          data: updateData
-        });
+      const updateData: any = {
+        status: lecturer_id ? 'PENDING_LECTURER' : (topic_id ? 'PENDING_FACULTY' : status),
+        defense_order,
+        final_report_path,
+        instructor_grade,
+        council_grade,
+        council_id: council_id ? BigInt(council_id) : undefined,
+      };
 
-        if(lecturer_id || topic_id){
-          let requestType: 'REGISTER_LECTURER' | 'REGISTER_TOPIC';
-          if(lecturer_id) {
-            requestType = 'REGISTER_LECTURER'
-          } 
-          else {
-            requestType = 'REGISTER_TOPIC';
-          }
+      const updatedCapstone = await tx.capstone.update({
+        where: {
+          capstone_id: capstoneIdBigInt
+        },
+        data: updateData
+      });
 
-          await tx.capstoneRequest.create({
-            data: {
-              capstone_id: capstoneIdBigInt,
-              sender_id: capstone.student_id, // Lấy ID của sinh viên sở hữu đồ án này
-              request_type: requestType,
-              message: message || `Sinh viên đăng ký ${requestType === 'REGISTER_LECTURER' ? 'giảng viên' : 'đề tài'} mới.`,
-              target_id: lecturer_id ? BigInt(lecturer_id) : BigInt(topic_id!),
-              status: 'PENDING', // Trạng thái yêu cầu ban đầu luôn là chờ duyệt
-            }
-          });
+      if (lecturer_id || topic_id) {
+        let requestType: 'REGISTER_LECTURER' | 'REGISTER_TOPIC';
+        if (lecturer_id) {
+          requestType = 'REGISTER_LECTURER'
+        }
+        else {
+          requestType = 'REGISTER_TOPIC';
         }
 
-        
+        const isExisCapstoneRequest = await tx.capstoneRequest.findMany({
+          where: {
+            capstone_id: capstoneIdBigInt,
+          }
+        })
+        if (isExisCapstoneRequest.find((item: any) =>
+          item.request_type === requestType &&
+          item.status === 'PENDING' &&
+          item.target_id !== null &&
+          String(item.target_id) === String(requestType === 'REGISTER_LECTURER' ? BigInt(lecturer_id!) : BigInt(topic_id!))
+        )) {
+          throw new BadRequestException(`Bạn đã có yêu cầu ${requestType === 'REGISTER_LECTURER' ? 'đăng ký giảng viên' : 'đăng ký đề tài'} chưa được xử lý`)
+        }
+
+        await tx.capstoneRequest.updateMany({
+          where: {
+            capstone_id: capstoneIdBigInt,
+            request_type: requestType,
+            status: 'PENDING',
+          },
+          data: {
+            status: 'REJECTED',
+            feedback: 'Hệ thống tự động hủy do sinh viên gửi yêu cầu đăng ký mới.'
+          }
+        });
+
+        await tx.capstoneRequest.create({
+          data: {
+            capstone_id: capstoneIdBigInt,
+            sender_id: capstone.student_id, // Lấy ID của sinh viên sở hữu đồ án này
+            request_type: requestType,
+            message: message || `Sinh viên đăng ký ${requestType === 'REGISTER_LECTURER' ? 'giảng viên' : 'đề tài'} mới.`,
+            target_id: lecturer_id ? BigInt(lecturer_id) : BigInt(topic_id!),
+            status: 'PENDING', // Trạng thái yêu cầu ban đầu luôn là chờ duyệt
+          }
+        });
+      }
+
+
       return updatedCapstone;
     })
   }
 
-  async assignCouncil(id: number, assignCouncilDto: AssignCouncilDto, req: any){
-    const {council_id} = assignCouncilDto
+  async assignCouncil(id: number, assignCouncilDto: AssignCouncilDto, req: any) {
+    const { council_id } = assignCouncilDto
     const councilBigInt = BigInt(council_id)
     const capstoneBigInt = BigInt(id)
     const user = req.user
     const capstone = await this.prisma.capstone.findUnique({
       where: { capstone_id: capstoneBigInt },
-      include: {faculty: true}
+      include: { faculty: true }
     });
 
-    if(String(user.id) !== String(capstone?.faculty.dean_id)){
+    if (String(user.id) !== String(capstone?.faculty.dean_id)) {
       throw new BadRequestException('Bạn không phải giảng viên được chỉ định trong yêu cầu này');
     }
 
@@ -193,15 +223,15 @@ export class CapstonesService {
         where: {
           capstone_id: capstoneBigInt
         },
-        data: {council_id: councilBigInt}
+        data: { council_id: councilBigInt }
       })
 
-      const councilEvaluation =await tx.councilEvaluation.findFirst({
-        where : {
-          capstone_id : capstoneBigInt
+      const councilEvaluation = await tx.councilEvaluation.findFirst({
+        where: {
+          capstone_id: capstoneBigInt
         }
       })
-      if(!councilEvaluation){
+      if (!councilEvaluation) {
         const allMembers = council.members;
         if (allMembers.length > 0) {
           const evaluationPromises = allMembers.map((member) => {

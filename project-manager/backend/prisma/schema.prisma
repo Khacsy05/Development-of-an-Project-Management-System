@@ -31,6 +31,8 @@ enum CapstoneStatus {
   DEFENSE_ELIGIBLE   // Đủ điều kiện ra hội đồng bảo vệ
   COMPLETED          // Đã bảo vệ và có điểm cuối cùng
   FAILED             // Bị trượt
+  CANCEL_REQUESTED   // Sinh viên đã yêu cầu hủy
+  CANCEL             // Sinh viên đã hủy
 }
 
 enum RequestStatus {

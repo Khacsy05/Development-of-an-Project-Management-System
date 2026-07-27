@@ -13,7 +13,8 @@ export class AuthService {
         const user = await this.prisma.user.findUnique({
             where: {username: username},
             include : {
-                role: true
+                role: true,
+                managed_faculty: true
             }
         })
         if (!user) {
@@ -32,6 +33,7 @@ export class AuthService {
                 name: user.fullname,
                 email: user.email,
                 role: user.role.role_name,
+                isDean: !!user.managed_faculty,
             },
             process.env.JWT_ACCESS_SECRET || "ACCESS_SECRET_KEY",
             { expiresIn: "15m" }
@@ -43,6 +45,7 @@ export class AuthService {
                 name: user.fullname,
                 email: user.email,
                 role: user.role.role_name,
+                isDean: !!user.managed_faculty,
             },
             process.env.JWT_REFRESH_SECRET || "REFRESH_SECRET_KEY",
             { expiresIn: "7d" }
@@ -65,6 +68,7 @@ export class AuthService {
                 name: user.fullname,
                 email: user.email,
                 role: user.role.role_name,
+                isDean: !!user.managed_faculty,
             },
         };
     }
@@ -81,7 +85,10 @@ export class AuthService {
             // 🔍 B. (Tùy chọn) Kiểm tra User trong CSDL xem có còn tồn tại/bị khóa hay không
             const user = await this.prisma.user.findUnique({
                 where: { user_id: BigInt(payload.id) },
-                include: { role: true }
+                include: { 
+                    role: true,
+                    managed_faculty: true
+                }
             });
 
             if (!user) {
@@ -95,6 +102,7 @@ export class AuthService {
                     name: user.fullname,
                     email: user.email,
                     role: user.role.role_name,
+                    isDean: !!user.managed_faculty,
                 },
                 process.env.JWT_ACCESS_SECRET || 'ACCESS_SECRET_KEY',
                 { expiresIn: '15m' }
@@ -106,6 +114,7 @@ export class AuthService {
                 name: user.fullname,
                 email: user.email,
                 role: user.role.role_name,
+                isDean: !!user.managed_faculty,
             },
             process.env.JWT_REFRESH_SECRET || 'REFRESH_SECRET_KEY',
             { expiresIn: '7d' }

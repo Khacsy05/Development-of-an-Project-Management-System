@@ -2,19 +2,32 @@
 
 import React from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import Footer from '@/components/layout/Footer';
+import apiClient from '@/lib/apiClient';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { logout } = useAuthStore();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // 1. Hiển thị Loading Toast lập tức để phản hồi người dùng
+    const toastId = toast.loading('Đang đăng xuất khỏi hệ thống...');
+
+    // 2. Xóa trạng thái đăng nhập ở RAM ngay để giao diện đổi sang trạng thái Loading
     logout();
-    // Xóa cookie token
-    document.cookie = "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-    window.location.href = '/auth/login';
+
+    try {
+      // 3. Gọi API xóa HttpOnly Cookie phía Backend
+      await apiClient.post('/auth/logout');
+    } catch (error) {
+      console.error('Lỗi khi gọi API đăng xuất:', error);
+    } finally {
+      toast.dismiss(toastId);
+      // 4. Chuyển hướng về trang đăng nhập
+      window.location.href = '/auth/login';
+    }
   };
 
   return (

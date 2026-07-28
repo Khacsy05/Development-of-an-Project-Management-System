@@ -13,6 +13,14 @@ export async function middleware(request: NextRequest) {
   const isProtectedRouter = pathname.startsWith("/dashboard") || pathname.startsWith('/admin');
   const isAdminRoute = pathname.startsWith('/admin');
 
+  if (pathname === '/') {
+    if (!refreshToken) {
+      return NextResponse.redirect(new URL('/auth/login', request.url));
+    } else {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+  }
+
   if (isProtectedRouter && !refreshToken) {
     const loginUrl = new URL('/auth/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname)
@@ -49,7 +57,7 @@ export async function middleware(request: NextRequest) {
         const subPath = pathname.substring('/dashboard'.length);
         return NextResponse.redirect(new URL(`/dashboard/student${subPath}`, request.url))
       }
-      if (userRole == "Lecturer" && pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/lecturer')) {
+      if (userRole == "Lecturer" && pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/lecturer') && !pathname.startsWith('/dashboard/faculty')) {
         const subPath = pathname.substring('/dashboard'.length);
         return NextResponse.redirect(new URL(`/dashboard/lecturer${subPath}`, request.url))
       }
@@ -67,8 +75,9 @@ export async function middleware(request: NextRequest) {
 // 4. Config Matcher: CHỈ BẮT CÁC TRANG GIAO DIỆN (Bỏ hoàn toàn /api)
 export const config = {
   matcher: [
+    '/',
     '/dashboard/:path*',
     '/admin/:path*',
-    '/login',
+    '/auth/login',
   ],
 };

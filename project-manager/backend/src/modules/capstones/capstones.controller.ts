@@ -11,41 +11,41 @@ import { AssignCouncilDto } from './dto/update-assignCouncil.dto';
 @Controller('capstones')
 
 export class CapstonesController {
-  constructor(private readonly capstonesService: CapstonesService) {}
+  constructor(private readonly capstonesService: CapstonesService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("Student")
   create(@Body() createCapstoneDto: CreateCapstoneDto, @Req() req: any) {
-    return this.capstonesService.create(createCapstoneDto,req);
+    return this.capstonesService.create(createCapstoneDto, req);
   }
 
   @Get()
-  findAll(@Query("") query : CapstoneQuery) {
+  findAll(@Query("") query: CapstoneQuery) {
     return this.capstonesService.findAll(query);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.capstonesService.findOne(+id);
+  findByUserId(@Param('id') id: string) {
+    return this.capstonesService.findByUserId(+id);
   }
 
   @Patch(':capstone_id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("Student", "Lecturer")
   update(@Param('capstone_id') capstone_id: number, @Body() updateCapstoneDto: UpdateCapstoneDto, @Req() req: any) {
-    return this.capstonesService.update(capstone_id, updateCapstoneDto,req);
+    return this.capstonesService.update(capstone_id, updateCapstoneDto, req);
   }
 
   @Patch(':id/assignCouncil')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("Lecturer")
   assignCouncil(
-    @Param('id') id: number, 
+    @Param('id') id: number,
     @Body() assignCouncilDto: AssignCouncilDto,
     @Req() req: any
-  ){
-    return this.capstonesService.assignCouncil(id, assignCouncilDto,req);
+  ) {
+    return this.capstonesService.assignCouncil(id, assignCouncilDto, req);
   }
 
   @Delete(':id')

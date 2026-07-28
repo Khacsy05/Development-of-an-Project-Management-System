@@ -16,15 +16,16 @@ import { CouncilEvalutionModule } from './modules/councils-evaluation/councils-e
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { CouncilsMembersModule } from './modules/councils-members/councils-members.module';
+import { MilestoneModule } from './modules/milestone/milestone.module';
 
 @Module({
   
   imports: [ 
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'uploads'),
+      rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads', // Đường dẫn tĩnh trên URL
     }),
-    PrismaModule, FacultiesModule, TopicModule, UsersModule, ClassesModule, AcademicYearsModule, CapstonesModule, CouncilsModule, AuthModule, CapstonesRequestModule, CapstonesSubmissionModule, CouncilEvalutionModule, CouncilsMembersModule],
+    PrismaModule, FacultiesModule, TopicModule, UsersModule, ClassesModule, AcademicYearsModule, CapstonesModule, CouncilsModule, AuthModule, CapstonesRequestModule, CapstonesSubmissionModule, CouncilEvalutionModule, CouncilsMembersModule, MilestoneModule],
   controllers: [AppController],
   providers: [AppService],
 })

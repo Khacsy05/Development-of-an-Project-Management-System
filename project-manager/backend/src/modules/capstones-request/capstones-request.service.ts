@@ -16,8 +16,30 @@ export class CapstonesRequestService {
     const { status, target_id, request_type, page, limit } = query;
     const where: any = {};
     if (status) where.status = status;
-    if (target_id) where.target_id = BigInt(target_id);
     if (request_type) where.request_type = request_type;
+
+    if (target_id) {
+      if (request_type === 'REGISTER_LECTURER') {
+        where.target_id = BigInt(target_id);
+      } else if (request_type === 'REGISTER_TOPIC') {
+        const faculty = await this.prisma.faculty.findFirst({
+          where: { dean_id: BigInt(target_id) },
+          select: { faculty_id: true }
+        });
+        if (faculty) {
+          const topics = await this.prisma.topic.findMany({
+            where: { faculty_id: faculty.faculty_id },
+            select: { topic_id: true }
+          });
+          const topicIds = topics.map(t => t.topic_id);
+          where.target_id = { in: topicIds };
+        } else {
+          where.target_id = -1n;
+        }
+      } else {
+        where.target_id = BigInt(target_id);
+      }
+    }
 
     const pageNumber = Math.max(1, Number(page) || 1)
     const limitNumber = Math.max(1, Number(limit) || 6)
@@ -43,6 +65,28 @@ export class CapstonesRequestService {
       this.prisma.capstoneRequest.count({ where })
     ]);
 
+    // Batch query tên các đề tài để tránh lỗi N+1 query
+    const topicIdsToFetch = capstoneRequests
+      .filter(req => req.request_type === 'REGISTER_TOPIC' && req.target_id)
+      .map(req => req.target_id as bigint);
+
+    const topics = await this.prisma.topic.findMany({
+      where: { topic_id: { in: topicIdsToFetch } },
+      select: { topic_id: true, title: true, description: true, technologies: true }
+    });
+
+    const topicMap = new Map(topics.map(t => [String(t.topic_id), t.title]));
+
+    const topicDecorate = topics.map(t => {
+      return {
+        ...t,
+        description: t.description?.split('\n').filter(Boolean),
+        technologies: t.technologies?.split('\n').filter(Boolean)
+      }
+    })
+
+    const topicMapDecorate = new Map(topicDecorate.map(t => [String(t.topic_id), t]));
+
     return {
       data: capstoneRequests.map((req) => ({
         request_id: String(req.request_id),
@@ -51,6 +95,17 @@ export class CapstonesRequestService {
         request_type: req.request_type,
         message: req.message,
         target_id: req.target_id ? String(req.target_id) : null,
+        topic_title: req.request_type === 'REGISTER_TOPIC' && req.target_id
+          ? topicMap.get(String(req.target_id)) || 'Đề tài không tồn tại'
+          : null,
+        topic_description: req.request_type === 'REGISTER_TOPIC' && req.target_id
+          ? topicMapDecorate.get(String(req.target_id))?.description
+          : null,
+
+        topic_technologies: req.request_type === 'REGISTER_TOPIC' && req.target_id
+          ? topicMapDecorate.get(String(req.target_id))?.technologies
+          : null,
+
         status: req.status,
         feedback: req.feedback,
         created_at: req.created_at,
@@ -97,7 +152,7 @@ export class CapstonesRequestService {
     if (capstoneRequest.request_type === "REGISTER_TOPIC") {
       const topic = await this.prisma.topic.findUnique({
         where: {
-          topic_id: requestIdBigInt
+          topic_id: capstoneRequest.target_id ? BigInt(capstoneRequest.target_id) : undefined
         },
         include: {
           faculty: true

@@ -87,8 +87,30 @@ export class CapstonesService {
     }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} capstone`;
+  async findByUserId(id: number) {
+    return await this.prisma.capstone.findFirst({
+      where: {
+        student_id: BigInt(id)
+      },
+      include: {
+        topic: {
+          include: {
+            expertise: true
+          }
+        },
+        lecturer: true,
+        submission: true,
+        council: {
+          include: {
+            members: {
+              include: {
+                lecturer: true
+              }
+            }
+          }
+        }
+      }
+    })
   }
 
   async update(capstone_id: number, updateCapstoneDto: UpdateCapstoneDto, req: any) {

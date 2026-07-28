@@ -35,7 +35,7 @@ const Login = () => { // 🌟 Sửa tên component viết hoa chữ cái đầu
       // Chuyển hướng sau một khoảng trễ ngắn để người dùng kịp nhìn thấy Toast thành công
       setTimeout(() => {
         window.location.href = safeCallbackUrl;
-      }, 1000);
+      }, 500);
     } catch (error: any) {
       // Lấy thông báo lỗi chi tiết từ backend nếu có
       const errorMsg = error?.response?.data?.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại!';

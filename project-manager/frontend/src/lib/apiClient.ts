@@ -29,7 +29,7 @@ apiClient.interceptors.response.use(
             try {
                 // Gọi API cấp lại Access Token mới
                 const res = await axios.post(
-                    `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
+                    `${process.env.NEXT_PUBLIC_API_URL}/auth/refreshToken`,
                     {},
                     { withCredentials: true }
                 );
@@ -46,7 +46,9 @@ apiClient.interceptors.response.use(
             } catch (refreshError) {
                 // Nếu Refresh Token cũng hết hạn -> Logout người dùng
                 useAuthStore.getState().logout();
-                window.location.href = '/login';
+                if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login') {
+                    window.location.href = '/auth/login';
+                }
                 return Promise.reject(refreshError);
             }
         }

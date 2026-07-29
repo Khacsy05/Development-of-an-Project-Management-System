@@ -94,6 +94,7 @@ export class CapstonesRequestService {
         sender_id: String(req.sender_id),
         request_type: req.request_type,
         message: req.message,
+        file_path: req.file_path,
         target_id: req.target_id ? String(req.target_id) : null,
         topic_title: req.request_type === 'REGISTER_TOPIC' && req.target_id
           ? topicMap.get(String(req.target_id)) || 'Đề tài không tồn tại'

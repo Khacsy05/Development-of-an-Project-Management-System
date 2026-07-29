@@ -45,4 +45,8 @@ export class UpdateCapstoneDto extends PartialType(CreateCapstoneDto) {
     @IsOptional()
     @IsString()
     message?: string;
+
+    @IsOptional()
+    @IsString()
+    file_path?: string;
 }

@@ -215,22 +215,6 @@ async function main() {
     });
   }
 
-  for (let i = 1; i < 5; i++) {
-    const capstoneId = 1n + BigInt(i);
-    const userId = 2351170610n + BigInt(i);
-    await prisma.capstone.upsert({
-      where: { capstone_id: capstoneId },
-      update: {},
-      create: {
-        capstone_id: capstoneId,
-        student_id: userId,
-        faculty_id: 1000n,
-        semester_id: 8,
-        status: CapstoneStatus.PENDING,
-
-      }
-    })
-  }
 
   const danhSachNamHoc = [
     { year_name: '2023-2024', star_year: 2023, end_year: 2024 },
@@ -505,6 +489,21 @@ async function main() {
   // 12. Hồ sơ Đồ án Tốt nghiệp (Capstones)
   // ==========================================
   // Tiến hành gán 5 sinh viên (2351170611n -> 2351170615n) làm 5 đề tài vừa tạo ở trên
+  for (let i = 1; i < 5; i++) {
+    const capstoneId = 1n + BigInt(i);
+    const userId = 2351170610n + BigInt(i);
+    await prisma.capstone.upsert({
+      where: { capstone_id: capstoneId },
+      update: {},
+      create: {
+        capstone_id: capstoneId,
+        student_id: userId,
+        faculty_id: 1000n,
+        semester_id: 8,
+        status: CapstoneStatus.PENDING,
+      }
+    })
+  }
 
 
   console.log('✅ Seed dữ liệu thành công!');

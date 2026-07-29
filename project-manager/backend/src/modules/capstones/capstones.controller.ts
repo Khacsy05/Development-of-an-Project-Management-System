@@ -16,8 +16,8 @@ export class CapstonesController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("Student")
-  create(@Body() createCapstoneDto: CreateCapstoneDto, @Req() req: any) {
-    return this.capstonesService.create(createCapstoneDto, req);
+  create(@Req() req: any) {
+    return this.capstonesService.create(req);
   }
 
   @Get()

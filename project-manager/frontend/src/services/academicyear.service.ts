@@ -1,15 +1,11 @@
-import { prisma } from '../../../backend/src/lib/prisma';
-
-function serialize(data: any) {
-    return JSON.parse(JSON.stringify(data, (_, v) => typeof v === 'bigint' ? v.toString() : v));
-}
+import apiClient from "@/lib/apiClient";
 
 export async function getAcademicYearList() {
-    const rawData = await prisma.academicYear.findMany({
-        orderBy: [
-            { created_at: 'desc' },
-            { year_id: 'desc' }
-        ]
-    });
-    return serialize(rawData);
+    try {
+        const response = await apiClient.get('/academic-years');
+        return response.data;
+    } catch (error) {
+        console.error('Lỗi khi lấy danh sách năm học:', error);
+        throw error;
+    }
 }

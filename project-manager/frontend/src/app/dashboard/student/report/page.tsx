@@ -5,46 +5,9 @@ import { getCapstoneByUser, updateCapstoneSubmission } from '@/services/capstone
 import { getMilestoneList } from '@/services/milestone.service';
 import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from 'sonner';
+import { Capstone, Submission } from '@/type/capstone';
+import { Milestone } from '@/type/milestone';
 
-interface Milestone {
-  milestone_id: string;
-  phase_name: string;
-  description: string;
-  deadline: string;
-}
-
-interface Submission {
-  submission_id: string;
-  milestone_id: string;
-  file_path: string | null;
-  student_note: string | null;
-  grade: number | null;
-  lecturer_note: string | null;
-  status: 'PENDING' | 'PASSED' | 'FAILED';
-}
-
-interface Capstone {
-  capstone_id: string;
-  status: string;
-  topic?: {
-    title: string;
-    expertise?: {
-      name: string;
-    };
-  } | null;
-  lecturer?: {
-    fullname: string;
-  } | null;
-  submission: Submission[];
-  council?: {
-    name: string;
-    members?: Array<{
-      lecturer?: {
-        fullname: string;
-      } | null;
-    }> | null;
-  } | null;
-}
 
 export default function ReportPage() {
   const [capstone, setCapstone] = useState<Capstone | null>(null);
@@ -207,7 +170,7 @@ export default function ReportPage() {
 
       {/* 2. KHỐI NỘP BÁO CÁO ĐỒ ÁN */}
       <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 p-6 flex flex-col gap-6">
-        
+
         {/* Header khối nộp báo cáo & hiển thị hạn của mốc hiện tại */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-5">
           <h2 className="text-lg font-bold text-gray-800 uppercase flex items-center gap-2">
@@ -290,6 +253,7 @@ export default function ReportPage() {
                 // Điều kiện kích hoạt nút nộp bài
                 const isInSubmitPeriod = now >= startDate && now <= deadlineDate;
                 const isDeadlinePassed = now > deadlineDate;
+                const isDoing = capstone?.status === 'DOING';
 
                 return (
                   <tr key={milestone.milestone_id} className="hover:bg-gray-50/50 transition-colors">
@@ -299,7 +263,7 @@ export default function ReportPage() {
                     <td className="px-6 py-4">{statusBadge}</td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2.5">
-                        
+
                         {/* Nút Xem chi tiết */}
                         <button
                           onClick={() => {
@@ -324,6 +288,11 @@ export default function ReportPage() {
                               Chờ mốc trước Đạt
                             </span>
                           )}
+                          {!isDoing && (
+                            <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                              Đồ án không ở trạng thái thực hiện
+                            </span>
+                          )}
                           <button
                             onClick={() => {
                               if (submission) {
@@ -332,12 +301,11 @@ export default function ReportPage() {
                                 setStudentNote(submission.student_note || '');
                               }
                             }}
-                            disabled={!submission || submission.status === 'PASSED' || isDeadlinePassed || !isPreviousPassed}
-                            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                              submission && submission.status !== 'PASSED' && !isDeadlinePassed && isPreviousPassed
-                                ? 'bg-[#2e7d32] hover:bg-[#205723] text-white shadow-sm'
-                                : 'bg-gray-400 text-gray-100 cursor-not-allowed'
-                            }`}
+                            disabled={!submission || submission.status === 'PASSED' || isDeadlinePassed || !isPreviousPassed || !isDoing}
+                            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${submission && submission.status !== 'PASSED' && !isDeadlinePassed && isPreviousPassed && isDoing
+                              ? 'bg-[#2e7d32] hover:bg-[#205723] text-white shadow-sm'
+                              : 'bg-gray-400 text-gray-100 cursor-not-allowed'
+                              }`}
                           >
                             Nộp
                           </button>
@@ -380,13 +348,13 @@ export default function ReportPage() {
 
             {/* Body Modal */}
             <div className="p-8 flex flex-col gap-6">
-              
+
               <div className="bg-white p-5 rounded-2xl border border-gray-200/60 shadow-sm">
                 <h4 className="text-[10px] font-bold text-[#8d9299] tracking-wider uppercase mb-1">
                   Báo cáo / Giai đoạn
                 </h4>
                 <p className="text-sm font-bold text-gray-900">{activeSubmitMilestone.phase_name}</p>
-                
+
                 <h4 className="text-[10px] font-bold text-[#8d9299] tracking-wider uppercase mt-4 mb-1">
                   Hạn chót nộp bài
                 </h4>
@@ -452,7 +420,7 @@ export default function ReportPage() {
       {activeDetailMilestone && activeDetailSubmission && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
           <div className="bg-[#f7f8fc] rounded-[32px] shadow-2xl overflow-hidden max-w-lg w-full border border-gray-100 flex flex-col">
-            
+
             {/* Header Modal */}
             <div className="flex items-center justify-between bg-[#5865f2] text-white">
               <h3 className="text-[16px] font-bold uppercase tracking-wider pl-8 py-5">
@@ -472,7 +440,7 @@ export default function ReportPage() {
 
             {/* Body Modal */}
             <div className="p-8 flex flex-col gap-5 overflow-y-auto max-h-[60vh]">
-              
+
               <div className="bg-white p-5 rounded-2xl border border-gray-200/60 shadow-sm flex flex-col gap-4">
                 <div>
                   <h4 className="text-[10px] font-bold text-[#8d9299] tracking-wider uppercase mb-0.5">Báo cáo / Giai đoạn</h4>
@@ -480,18 +448,17 @@ export default function ReportPage() {
                 </div>
                 <div>
                   <h4 className="text-[10px] font-bold text-[#8d9299] tracking-wider uppercase mb-0.5">Trạng thái</h4>
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold mt-1 ${
-                    activeDetailSubmission.status === 'PASSED'
-                      ? 'bg-purple-50 text-purple-600 border border-purple-100'
-                      : activeDetailSubmission.status === 'FAILED'
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold mt-1 ${activeDetailSubmission.status === 'PASSED'
+                    ? 'bg-purple-50 text-purple-600 border border-purple-100'
+                    : activeDetailSubmission.status === 'FAILED'
                       ? 'bg-red-50 text-red-600 border border-red-100'
                       : 'bg-blue-50 text-blue-600 border border-blue-100'
-                  }`}>
+                    }`}>
                     {activeDetailSubmission.status === 'PASSED'
                       ? 'Đã hoàn thành'
                       : activeDetailSubmission.status === 'FAILED'
-                      ? 'Không đạt'
-                      : 'Chờ duyệt'}
+                        ? 'Không đạt'
+                        : 'Chờ duyệt'}
                   </span>
                 </div>
                 {activeDetailSubmission.file_path && (
@@ -518,20 +485,48 @@ export default function ReportPage() {
                 </div>
               </div>
 
-              {/* Phần kết quả đánh giá của Giảng viên */}
+              {/* Phần kết quả đánh giá của Giảng viên & Hội đồng */}
               <div className="bg-white p-5 rounded-2xl border border-gray-200/60 shadow-sm flex flex-col gap-4">
                 <h3 className="text-xs font-bold text-blue-600 border-b border-gray-100 pb-2 uppercase tracking-wide">
-                  Đánh giá từ giảng viên
+                  Đánh giá từ giảng viên & Hội đồng
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="text-[10px] font-bold text-[#8d9299] tracking-wider uppercase mb-0.5">Điểm số</h4>
-                    <p className="text-lg font-black text-gray-900">
-                      {activeDetailSubmission.grade !== null && activeDetailSubmission.grade !== undefined
-                        ? `${activeDetailSubmission.grade} / 10`
-                        : 'Chưa chấm điểm'}
-                    </p>
-                  </div>
+                <div className="">
+
+
+                  {/* Hiển thị Điểm Hội đồng nếu đây là đợt báo cáo cuối cùng */}
+                  {milestones.length > 0 && activeDetailMilestone?.milestone_id === milestones[milestones.length - 1].milestone_id && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="text-[10px] font-bold text-[#8d9299] tracking-wider uppercase mb-0.5">Điểm hướng dẫn</h4>
+                        <p className="text-sm font-bold text-gray-900 mt-1">
+                          {activeDetailSubmission.grade !== null && activeDetailSubmission.grade !== undefined
+                            ? (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#5865f2]/10 text-[#5865f2] border border-[#5865f2]/20">
+                                {activeDetailSubmission.grade} / 10
+                              </span>)
+                            : (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-100 animate-pulse">
+                                Chưa chấm điểm
+                              </span>
+                            )}
+                        </p>
+                      </div>
+
+                      <div className="">
+                        <h4 className="text-[10px] font-bold text-[#8d9299] tracking-wider uppercase mb-0.5">Điểm Hội đồng</h4>
+                        {capstone?.council_grade !== null && capstone?.council_grade !== undefined ? (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#5865f2]/10 text-[#5865f2] border border-[#5865f2]/20">
+                            Điểm Hội đồng: {capstone.council_grade} / 10
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-100 animate-pulse">
+                            Hội đồng đang chấm điểm...
+                          </span>
+                        )}
+
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h4 className="text-[10px] font-bold text-[#8d9299] tracking-wider uppercase mb-0.5">Nhận xét của GVHD</h4>

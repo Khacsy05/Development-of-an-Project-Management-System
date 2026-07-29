@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateCapstoneDto } from './dto/create-capstone.dto';
 import { UpdateCapstoneDto } from './dto/update-capstone.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CapstoneQuery } from './dto/query-capstone.dto';
@@ -9,8 +8,8 @@ import { CapstoneStatus } from '@prisma/client';
 @Injectable()
 export class CapstonesService {
   constructor(private prisma: PrismaService) { }
-  async create(createCapstoneDto: CreateCapstoneDto, req: any) {
-    const { } = createCapstoneDto
+  async create(req: any) {
+
     const user = req.user as any;
     const studentIdBigInt = BigInt(user.id);
     const student = await this.prisma.user.findUnique({
@@ -19,6 +18,13 @@ export class CapstonesService {
       },
       include: { faculty: true }
     })
+
+    if (!student) {
+      throw new BadRequestException("Bạn không phải là sinh viên!")
+    }
+    if (!student.faculty_id || !student.faculty) {
+      throw new BadRequestException("Tài khoản sinh viên của bạn chưa được liên kết với Khoa nào trong hệ thống!");
+    }
     const currentSemester = await this.prisma.semester.findFirst({
       where: {
         start_date: { lte: new Date() },
@@ -28,9 +34,12 @@ export class CapstonesService {
     if (!currentSemester) {
       throw new BadRequestException("Hiện tại không nằm trong thời gian của học kỳ nào được cấu hình!");
     }
-    const existingCapstone = await this.prisma.capstone.findUnique({
+    const existingCapstone = await this.prisma.capstone.findFirst({
       where: {
-        student_id: studentIdBigInt
+        student_id: studentIdBigInt,
+        status: {
+          notIn: [CapstoneStatus.CANCEL]
+        }
       }
     })
 
@@ -92,6 +101,9 @@ export class CapstonesService {
       where: {
         student_id: BigInt(id)
       },
+      orderBy: {
+        capstone_id: 'desc'
+      },
       include: {
         topic: {
           include: {
@@ -100,6 +112,11 @@ export class CapstonesService {
         },
         lecturer: true,
         submission: true,
+        requests: {
+          orderBy: {
+            created_at: 'desc'
+          }
+        },
         council: {
           include: {
             members: {
@@ -124,6 +141,7 @@ export class CapstonesService {
       defense_order,
       final_report_path,
       message,
+      file_path,
     } = updateCapstoneDto
     const capstoneIdBigInt = BigInt(capstone_id)
     const user = req.user as any
@@ -155,7 +173,30 @@ export class CapstonesService {
         where: {
           capstone_id: capstoneIdBigInt
         },
-        data: updateData
+        data: updateData,
+        include: {
+          topic: {
+            include: {
+              expertise: true
+            }
+          },
+          lecturer: true,
+          submission: true,
+          requests: {
+            orderBy: {
+              created_at: 'desc'
+            }
+          },
+          council: {
+            include: {
+              members: {
+                include: {
+                  lecturer: true
+                }
+              }
+            }
+          }
+        }
       });
 
       if (lecturer_id || topic_id) {
@@ -201,12 +242,40 @@ export class CapstonesService {
             message: message || `Sinh viên đăng ký ${requestType === 'REGISTER_LECTURER' ? 'giảng viên' : 'đề tài'} mới.`,
             target_id: lecturer_id ? BigInt(lecturer_id) : BigInt(topic_id!),
             status: 'PENDING', // Trạng thái yêu cầu ban đầu luôn là chờ duyệt
+            file_path: file_path, // Ghi nhận đường dẫn file đính kèm
           }
         });
       }
 
 
-      return updatedCapstone;
+      return await tx.capstone.findUnique({
+        where: {
+          capstone_id: capstoneIdBigInt
+        },
+        include: {
+          topic: {
+            include: {
+              expertise: true
+            }
+          },
+          lecturer: true,
+          submission: true,
+          requests: {
+            orderBy: {
+              created_at: 'desc'
+            }
+          },
+          council: {
+            include: {
+              members: {
+                include: {
+                  lecturer: true
+                }
+              }
+            }
+          }
+        }
+      });
     })
   }
 

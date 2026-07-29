@@ -1,21 +1,11 @@
-import { prisma } from '../../../backend/src/lib/prisma';
+import apiClient from "@/lib/apiClient";
 
-function serialize(data: any) {
-    return JSON.parse(JSON.stringify(data, (_, v) => typeof v === 'bigint' ? v.toString() : v));
-}
-
-export async function getTopicList(isAvailable?: boolean) {
-    const rawData = await prisma.topic.findMany({
-        where: {
-            is_available:  isAvailable !== undefined ? isAvailable : undefined,
-        },
-        include: {
-            expertise: { select: { name: true } },
-        },
-        orderBy: [
-            { created_at: 'desc' },
-            { topic_id: 'desc' }
-        ]
-    });
-    return serialize(rawData);
+export async function getTopicList(params?: { isAvailable?: string; title?: string; page?: number; limit?: number }) {
+    try {
+        const response = await apiClient.get('/topics', { params });
+        return response.data;
+    } catch (error) {
+        console.error('Lỗi khi lấy danh sách đề tài:', error);
+        throw error;
+    }
 }

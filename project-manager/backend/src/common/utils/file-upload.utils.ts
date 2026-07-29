@@ -25,13 +25,13 @@ export const multerOptions = (folderName: string = 'general') => ({
     const ext = file.originalname.split('.').pop()?.toLowerCase();
     
     // 2. Danh sách các đuôi file được phép upload
-    const allowedExtensions = ['pdf', 'doc', 'docx', 'zip', 'rar'];
+    const allowedExtensions = ['pdf', 'doc', 'docx', 'zip', 'rar', 'png', 'jpg', 'jpeg'];
 
     // 3. Kiểm tra theo ĐUÔI FILE thay vì chỉ kiểm tra mimetype
     if (allowedExtensions.includes(ext)) {
         cb(null, true);
     } else {
-        cb(new BadRequestException('Chỉ chấp nhận file định dạng PDF, DOC, DOCX, ZIP, RAR!'), false);
+        cb(new BadRequestException('Chỉ chấp nhận file định dạng PDF, DOC, DOCX, ZIP, RAR, PNG, JPG, JPEG!'), false);
     }
     },
   limits: {

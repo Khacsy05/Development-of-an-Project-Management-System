@@ -1,6 +1,15 @@
 import apiClient from "@/lib/apiClient";
 import { GetCapstoneRequestQueryDto, GetCapstonesQueryDto, GetCapstonesRequestUpdateDto } from "@/type/capstone";
 
+export async function createCapstone() {
+    try {
+        const response = await apiClient.post('/capstones')
+        return response.data
+    } catch (error: any) {
+        console.error('Lỗi khi tạo đồ án:', error.response?.data?.message);
+        throw new Error(error.response?.data?.message);
+    }
+}
 
 export async function getCapstoneLists(query?: GetCapstonesQueryDto) {
     try {
@@ -36,6 +45,16 @@ export async function getCapstoneRequest(query?: GetCapstoneRequestQueryDto) {
     }
 }
 
+export async function updatedCapstone(id: string, data: any) {
+    try {
+        const response = await apiClient.patch(`/capstones/${id}`, data);
+        return response.data
+    } catch (error: any) {
+        console.error('Lỗi khi tạo yêu cầu đồ án:', error.response?.data?.message);
+        throw new Error(error.response?.data?.message);
+    }
+}
+
 export async function updateCapstoneRequest(id: string, data: GetCapstonesRequestUpdateDto) {
     try {
         const response = await apiClient.patch(`/capstones-request/${id}`, data);
@@ -54,4 +73,15 @@ export async function updateCapstoneSubmission(id: string, data: GetCapstonesReq
         console.error('Lỗi khi cập nhật đồ án:', error);
         throw error;
     }
+}
+
+export async function uploadFile(file: File): Promise<{ file_path: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post('/upload', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return response.data;
 }

@@ -206,7 +206,7 @@ export default function CapstonesPage() {
             {selectedRequest && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
                     <div className="bg-[#f7f8fc] rounded-[32px] shadow-2xl overflow-hidden max-w-2xl w-full border border-gray-100 flex flex-col max-h-[90vh]">
-                        
+
                         {/* Header Modal */}
                         <div className="flex items-center justify-between bg-[#5865f2] text-white">
                             <h3 className="text-[17px] font-bold uppercase tracking-wider pl-8 py-5">
@@ -223,10 +223,10 @@ export default function CapstonesPage() {
 
                         {/* Body Modal */}
                         <div className="p-8 overflow-y-auto flex-1 flex flex-col gap-6">
-                            
+
                             {/* Card thông tin chi tiết */}
                             <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm flex flex-col gap-5">
-                                
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <h4 className="text-[10px] font-bold text-[#8d9299] tracking-wider uppercase mb-1">Mã sinh viên</h4>
@@ -253,6 +253,28 @@ export default function CapstonesPage() {
                                         {selectedRequest.message || 'Không có lời nhắn'}
                                     </p>
                                 </div>
+
+                                {selectedRequest.file_path && (
+                                    <div>
+                                        <h4 className="text-[10px] font-bold text-[#8d9299] tracking-wider uppercase mb-1">File đính kèm (Bảng điểm)</h4>
+                                        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                                            <svg className="w-5 h-5 text-blue-600 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            <a 
+                                                href={selectedRequest.file_path.startsWith('http') 
+                                                    ? selectedRequest.file_path 
+                                                    : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace('/api', '') + selectedRequest.file_path
+                                                }
+                                                target="_blank" 
+                                                rel="noreferrer"
+                                                className="text-xs font-bold text-blue-600 hover:text-blue-800 underline truncate"
+                                            >
+                                                {selectedRequest.file_path.split('/').pop() || 'Xem file đính kèm'}
+                                            </a>
+                                        </div>
+                                    </div>
+                                )}
 
                             </div>
 

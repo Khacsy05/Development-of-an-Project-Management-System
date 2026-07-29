@@ -77,7 +77,7 @@ model User {
   classes_managed    Class[]             // Giảng viên quản lý lớp cố vấn
   lecturer_expertises LecturerExpertise[] // Chuyên môn của giảng viên
   topics_created     Topic[]             // Đề tài do user này tạo ra
-  student_capstones  Capstone?          @relation("StudentCapstones")
+  student_capstones  Capstone[]          @relation("StudentCapstones")
   lecturer_capstones Capstone[]          @relation("LecturerCapstones")
   council_memberships CouncilMember[]     // Tham gia vào hội đồng
   capstone_requests CapstoneRequest[] @relation("UserCapstoneRequests")
@@ -247,7 +247,7 @@ model Topic {
 model Capstone {
   capstone_id        BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
   
-  student_id         BigInt          @unique @db.UnsignedBigInt
+  student_id         BigInt          @db.UnsignedBigInt
   student            User            @relation("StudentCapstones", fields: [student_id], references: [user_id], onDelete: Restrict, onUpdate: Cascade)
   
   // OPTIONAL (Có dấu ?): Để sinh viên có thể đăng ký 1 trong 2 trước
@@ -293,7 +293,7 @@ model CapstoneRequest {
   
   // Phân loại yêu cầu: "REGISTER_LECTURER" (Xin thầy hướng dẫn), "REGISTER_TOPIC" (Xin Khoa duyệt đề tài)
   request_type String    @db.VarChar(50) 
-  
+  file_path     String?
   // Nội dung sinh viên viết (VD: "Em muốn xin thầy hướng dẫn đề tài này ạ...")
   message      String    @db.Text 
   target_id    BigInt?           @db.UnsignedBigInt

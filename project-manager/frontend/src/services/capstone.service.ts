@@ -75,6 +75,8 @@ export async function updateCapstoneSubmission(id: string, data: GetCapstonesReq
     }
 }
 
+
+
 export async function uploadFile(file: File): Promise<{ file_path: string }> {
     const formData = new FormData();
     formData.append('file', file);
@@ -84,4 +86,14 @@ export async function uploadFile(file: File): Promise<{ file_path: string }> {
         },
     });
     return response.data;
+}
+
+export async function getCapstoneSubmissions(params?: { lecturer_id?: string; milestone_type?: 'progress' | 'final' }) {
+    try {
+        const response = await apiClient.get('/capstones-submission', { params });
+        return response.data;
+    } catch (error) {
+        console.error('Lỗi khi lấy danh sách bài nộp:', error);
+        throw error;
+    }
 }

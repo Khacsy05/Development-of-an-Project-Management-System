@@ -3,23 +3,66 @@ import { CreateCapstonesSubmissionDto } from './dto/create-capstones-submission.
 import { UpdateCapstonesSubmissionDto } from './dto/update-capstones-submission.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CapstoneStatus } from '@prisma/client';
+import { CapstoneSubmissionQuery } from './dto/query-submission.dto';
 
 @Injectable()
 export class CapstonesSubmissionService {
-  constructor(private prisma: PrismaService){}
+  constructor(private prisma: PrismaService) { }
   create(createCapstonesSubmissionDto: CreateCapstonesSubmissionDto) {
     return 'This action adds a new capstonesSubmission';
   }
 
-  findAll() {
-    return `This action returns all capstonesSubmission`;
+  async findAll(query: CapstoneSubmissionQuery) {
+    const { lecturer_id, milestone_type } = query;
+    const where: any = {};
+
+    if (lecturer_id) {
+      where.capstone = {
+        lecturer_id: BigInt(lecturer_id)
+      };
+    }
+
+    if (milestone_type === 'progress') {
+      where.milestone_id = {
+        not: 4n
+      };
+    } else if (milestone_type === 'final') {
+      where.milestone_id = 4n;
+    }
+
+    const submissions = await this.prisma.capstoneSubmission.findMany({
+      where,
+      include: {
+        milestone: true,
+        capstone: {
+          include: {
+            student: true,
+            topic: true
+          }
+        }
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
+
+    return submissions.map(sub => {
+      const plainSub = JSON.parse(JSON.stringify(sub));
+      if (plainSub.capstone && plainSub.capstone.student) {
+        plainSub.capstone.student = {
+          ...plainSub.capstone.student,
+          user: plainSub.capstone.student
+        };
+      }
+      return plainSub;
+    });
   }
 
   findOne(id: number) {
     return `This action returns a #${id} capstonesSubmission`;
   }
 
-  async update(id: number, updateCapstonesSubmissionDto: UpdateCapstonesSubmissionDto,req: any) {
+  async update(id: number, updateCapstonesSubmissionDto: UpdateCapstonesSubmissionDto, req: any) {
     const {
       status,
       student_note,
@@ -33,28 +76,28 @@ export class CapstonesSubmissionService {
     // 1. Tìm bản ghi submission kèm cả thông tin milestone và capstone
     const capstoneSubmis = await this.prisma.capstoneSubmission.findUnique({
       where: { submission_id: submissionIdBigint },
-      include: { 
+      include: {
         capstone: true,
-        milestone: true 
+        milestone: true
       }
     });
 
-    
+
 
     if (!capstoneSubmis || !capstoneSubmis.capstone) {
       throw new NotFoundException('Không tìm thấy lượt nộp bài hoặc đồ án liên quan');
     }
-    if(user.role === "Student"){
+    if (user.role === "Student") {
       const now = new Date()
       const deadLine = new Date(capstoneSubmis.milestone.deadline);
 
-      if(now > deadLine){
+      if (now > deadLine) {
         throw new BadRequestException(
           `Đã quá hạn nộp bài! Hạn cuối là: ${deadLine.toLocaleString('vi-VN')}`
         );
       }
     }
-    
+
     const capstone = capstoneSubmis.capstone;
 
     return await this.prisma.$transaction(async (tx) => {
@@ -72,11 +115,11 @@ export class CapstonesSubmissionService {
       });
 
       // 3. XÁC ĐỊNH ĐIỀU KIỆN: Chỉ Milestone số 4 (Báo cáo cuối cùng) mới chuyển trạng thái sang DEFENSE_ELIGIBLE
-      const isFinalMilestone = capstoneSubmis.milestone_id === BigInt(4); 
-      
+      const isFinalMilestone = capstoneSubmis.milestone_id === BigInt(4);
+
       // Nếu là milestone cuối VÀ có điểm số VÀ trạng thái đạt -> Chuyển sang DEFENSE_ELIGIBLE
       const isEligibleForDefense = isFinalMilestone && grade !== undefined && grade !== null && status === 'PASSED';
-      
+
       const nextStatus = isEligibleForDefense ? CapstoneStatus.DEFENSE_ELIGIBLE : capstone.status;
       const finalInstructorGrade = isFinalMilestone ? grade : capstone.instructor_grade;
 

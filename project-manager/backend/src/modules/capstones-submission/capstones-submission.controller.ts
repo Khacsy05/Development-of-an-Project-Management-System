@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, Req, Query } from '@nestjs/common';
 import { CapstonesSubmissionService } from './capstones-submission.service';
 import { CreateCapstonesSubmissionDto } from './dto/create-capstones-submission.dto';
 import { UpdateCapstonesSubmissionDto } from './dto/update-capstones-submission.dto';
@@ -7,10 +7,11 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerOptions } from '../../common/utils/file-upload.utils';
+import { CapstoneSubmissionQuery } from './dto/query-submission.dto';
 
 @Controller('capstones-submission')
 export class CapstonesSubmissionController {
-  constructor(private readonly capstonesSubmissionService: CapstonesSubmissionService) {}
+  constructor(private readonly capstonesSubmissionService: CapstonesSubmissionService) { }
 
   @Post()
   create(@Body() createCapstonesSubmissionDto: CreateCapstonesSubmissionDto) {
@@ -18,8 +19,8 @@ export class CapstonesSubmissionController {
   }
 
   @Get()
-  findAll() {
-    return this.capstonesSubmissionService.findAll();
+  findAll(@Query() query: CapstoneSubmissionQuery) {
+    return this.capstonesSubmissionService.findAll(query);
   }
 
   @Get(':id')
@@ -32,7 +33,7 @@ export class CapstonesSubmissionController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("Lecturer", "Student")
   update(
-    @Param('id') id: string, 
+    @Param('id') id: string,
     @Body() updateCapstonesSubmissionDto: UpdateCapstonesSubmissionDto,
     @UploadedFile() file: Express.Multer.File,
     @Req() req: any
@@ -43,7 +44,7 @@ export class CapstonesSubmissionController {
     }
 
     // 2. Truyền đúng 2 đối số vào hàm Service: (+id và dto)
-    return this.capstonesSubmissionService.update(+id, updateCapstonesSubmissionDto,req);
+    return this.capstonesSubmissionService.update(+id, updateCapstonesSubmissionDto, req);
   }
 
   @Delete(':id')

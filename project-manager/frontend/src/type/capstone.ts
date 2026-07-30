@@ -23,6 +23,7 @@ export enum CapstoneRequestStatus {
 
 export interface GetCapstonesQueryDto {
   status?: CapstoneStatus;   // Lọc theo trạng thái
+  lecturer_id?: string;      // Lọc theo giảng viên hướng dẫn
   page?: number;             // Phân trang
   limit?: number;            // Số lượng trên 1 trang
 }

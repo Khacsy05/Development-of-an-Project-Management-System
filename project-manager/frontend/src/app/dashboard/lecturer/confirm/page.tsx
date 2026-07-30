@@ -56,9 +56,10 @@ export default function CapstonesPage() {
             setSelectedRequest(null);
             setFeedback('');
             fetchCapstoneRequest(currentPage);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Lỗi khi chấp nhận yêu cầu:", error);
-            toast.error("Không thể xác nhận yêu cầu");
+            const errorMsg = error?.response?.data?.message || "Không thể xác nhận yêu cầu";
+            toast.error(errorMsg);
         } finally {
             setIsSubmitting(false);
         }
@@ -75,9 +76,10 @@ export default function CapstonesPage() {
             setSelectedRequest(null);
             setFeedback('');
             fetchCapstoneRequest(currentPage);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Lỗi khi từ chối yêu cầu:", error);
-            toast.error("Không thể từ chối yêu cầu");
+            const errorMsg = error?.response?.data?.message || "Không thể từ chối yêu cầu";
+            toast.error(errorMsg);
         } finally {
             setIsSubmitting(false);
         }

@@ -182,73 +182,80 @@ export class CapstonesRequestService {
       // console.log('Kết quả so sánh bằng:', String(lecturer.user_id) === String(user.id));
       // console.log('---------------------------------------------');
     }
-    return await this.prisma.$transaction(async (tx) => {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
 
 
-      const updateCapstonesRequest = await tx.capstoneRequest.update({
-        where: {
-          request_id: BigInt(request_id)
-        },
-        data: { status, feedback }
-      })
+        const updateCapstonesRequest = await tx.capstoneRequest.update({
+          where: {
+            request_id: BigInt(request_id)
+          },
+          data: { status, feedback }
+        })
 
-      let finalLecturerId = capstone.lecturer_id;
-      let finalTopicId = capstone.topic_id;
-      let nextStatus = capstone.status;
-      if (status === "APPROVED") {
-        if (capstoneRequest.request_type === "REGISTER_TOPIC") {
-          finalTopicId = capstoneRequest.target_id
-          nextStatus = finalLecturerId ? "DOING" : "PENDING"
+        let finalLecturerId = capstone.lecturer_id;
+        let finalTopicId = capstone.topic_id;
+        let nextStatus = capstone.status;
+        if (status === "APPROVED") {
+          if (capstoneRequest.request_type === "REGISTER_TOPIC") {
+            finalTopicId = capstoneRequest.target_id
+            nextStatus = finalLecturerId ? "DOING" : "PENDING"
+          }
+          else if (capstoneRequest.request_type === "REGISTER_LECTURER") {
+            finalLecturerId = capstoneRequest.target_id
+            nextStatus = finalTopicId ? "DOING" : "PENDING"
+          }
         }
-        else if (capstoneRequest.request_type === "REGISTER_LECTURER") {
-          finalLecturerId = capstoneRequest.target_id
-          nextStatus = finalTopicId ? "DOING" : "PENDING"
+        else if (status === "REJECTED") {
+          // Nếu bị từ chối, trả trạng thái Capstone về lại bước trước đó để sinh viên gửi lại request mới
+          nextStatus = capstoneRequest.request_type === "REGISTER_TOPIC" ? "PENDING_FACULTY" : "PENDING_LECTURER";
         }
-      }
-      else if (status === "REJECTED") {
-        // Nếu bị từ chối, trả trạng thái Capstone về lại bước trước đó để sinh viên gửi lại request mới
-        nextStatus = capstoneRequest.request_type === "REGISTER_TOPIC" ? "PENDING_FACULTY" : "PENDING_LECTURER";
-      }
-      await tx.capstone.update({
-        where: {
-          capstone_id: updateCapstonesRequest.capstone_id
-        },
-        data: {
-          lecturer_id: finalLecturerId,
-          topic_id: finalTopicId,
-          status: nextStatus
-        }
-      })
+        await tx.capstone.update({
+          where: {
+            capstone_id: updateCapstonesRequest.capstone_id
+          },
+          data: {
+            lecturer_id: finalLecturerId,
+            topic_id: finalTopicId,
+            status: nextStatus
+          }
+        })
 
-      if (capstone.status !== CapstoneStatus.DOING && nextStatus === CapstoneStatus.DOING) {
+        if (capstone.status !== CapstoneStatus.DOING && nextStatus === CapstoneStatus.DOING) {
 
-        // 1. Kiểm tra xem thực sự trong DB đã có bản ghi submission nào chưa cho chắc chắn
-        const existingSubmissions = await tx.capstoneSubmission.findFirst({
-          where: { capstone_id: capstone.capstone_id },
+          // 1. Kiểm tra xem thực sự trong DB đã có bản ghi submission nào chưa cho chắc chắn
+          const existingSubmissions = await tx.capstoneSubmission.findFirst({
+            where: { capstone_id: capstone.capstone_id },
 
-        });
-
-        // Nếu chưa từng có bản ghi nào thì mới tạo mới 4 giai đoạn
-        if (!existingSubmissions) {
-
-          const allMilestones = await tx.milestone.findMany();
-
-          const submissionPromises = allMilestones.map((milestone) => {
-            return tx.capstoneSubmission.create({
-              data: {
-                capstone_id: capstone.capstone_id,
-                milestone_id: milestone.milestone_id,
-                status: 'PENDING', // Đợi sinh viên nộp bài
-              },
-            });
           });
 
-          await Promise.all(submissionPromises);
-        }
-      }
+          // Nếu chưa từng có bản ghi nào thì mới tạo mới 4 giai đoạn
+          if (!existingSubmissions) {
 
-      return updateCapstonesRequest
-    })
+            const allMilestones = await tx.milestone.findMany();
+
+            const submissionPromises = allMilestones.map((milestone) => {
+              return tx.capstoneSubmission.create({
+                data: {
+                  capstone_id: capstone.capstone_id,
+                  milestone_id: milestone.milestone_id,
+                  status: 'PENDING', // Đợi sinh viên nộp bài
+                },
+              });
+            });
+
+            await Promise.all(submissionPromises);
+          }
+        }
+
+        return updateCapstonesRequest
+      })
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        throw new BadRequestException('Đề tài này đã được đăng ký và phê duyệt cho một sinh viên khác trong học kỳ này!');
+      }
+      throw error;
+    }
 
   }
 

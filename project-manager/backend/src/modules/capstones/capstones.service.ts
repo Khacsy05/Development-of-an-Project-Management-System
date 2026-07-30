@@ -57,13 +57,16 @@ export class CapstonesService {
   }
 
   async findAll(query: CapstoneQuery) {
-    const { status, page, limit } = query
+    const { status, lecturer_id, page, limit } = query
     const pageNumber = Math.max(1, Number(page) || 1)
     const limitNumber = Math.max(1, Number(limit) || 6)
     const skip = (pageNumber - 1) * limitNumber
 
-    const where = {
+    const where: any = {
       status: status ? status : undefined
+    }
+    if (lecturer_id) {
+      where.lecturer_id = BigInt(lecturer_id)
     }
 
     const [capstone, total] = await this.prisma.$transaction([
@@ -71,6 +74,15 @@ export class CapstonesService {
         where,
         skip,
         take: limitNumber,
+        include: {
+          student: true,
+          topic: true,
+          submission: {
+            include: {
+              milestone: true
+            }
+          }
+        },
         orderBy: [
           {
             created_at: 'desc',
@@ -83,16 +95,27 @@ export class CapstonesService {
       this.prisma.capstone.count({ where })
     ])
 
-    return {
+    const mappedCapstones = capstone.map((item) => {
+      const plainItem = JSON.parse(JSON.stringify(item));
+      return {
+        ...plainItem,
+        student: plainItem.student
+          ? {
+              ...plainItem.student,
+              user: plainItem.student, // Map user to itself so frontend's capstone.student.user works
+            }
+          : null,
+      };
+    });
 
-      data: capstone,
+    return {
+      data: mappedCapstones,
       pagination: {
         page: pageNumber,
         limit: limitNumber,
         total,
         totalPages: Math.ceil(total / limitNumber),
       },
-
     }
   }
 

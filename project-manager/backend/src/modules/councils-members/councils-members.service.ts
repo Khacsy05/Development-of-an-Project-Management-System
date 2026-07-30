@@ -2,27 +2,28 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { CreateCouncilsMemberDto } from './dto/create-councils-member.dto';
 import { UpdateCouncilsMemberDto } from './dto/update-councils-member.dto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CouncilMemberQuery } from './dto/query-council-member.dto';
 
 @Injectable()
 export class CouncilsMembersService {
-  constructor(private prisma : PrismaService){}
-  async create(createCouncilsMemberDto: CreateCouncilsMemberDto,req: any) {
+  constructor(private prisma: PrismaService) { }
+  async create(createCouncilsMemberDto: CreateCouncilsMemberDto, req: any) {
     const {
       council_id,
       members
     } = createCouncilsMemberDto
     const user = req.user as any
-    const councilBigInt = BigInt(council_id) 
+    const councilBigInt = BigInt(council_id)
     const isExisCouncil = await this.prisma.council.findUnique({
-      where: {council_id: councilBigInt},
-      include: {faculty: true}
+      where: { council_id: councilBigInt },
+      include: { faculty: true }
     })
 
-    if(!isExisCouncil) {
+    if (!isExisCouncil) {
       throw new NotFoundException('Không tìm thấy hội đồng chấm thi');
     }
 
-    if(String(user.id) !== String(isExisCouncil.faculty?.dean_id)){
+    if (String(user.id) !== String(isExisCouncil.faculty?.dean_id)) {
       throw new BadRequestException('Bạn không có quyền được chỉnh sửa');
     }
     const lecturerBigInts = members.map((m) => BigInt(m.lecturer_id));
@@ -49,15 +50,25 @@ export class CouncilsMembersService {
       data: dataToInsert,
       skipDuplicates: true, // Tránh crash nếu giảng viên đó đã có trong hội đồng từ trước
     });
-      
+
     return {
       message: `Đã thêm thành công ${lecturerBigInts.length} thành viên vào hội đồng`,
     };
 
   }
 
-  findAll() {
-    return `This action returns all councilsMembers`;
+  async findAll(params: CouncilMemberQuery) {
+    const { lecturer_id } = params
+    const where: any = {}
+    if (lecturer_id) where.lecturer_id = BigInt(lecturer_id)
+    return await this.prisma.councilMember.findMany({
+      where,
+      include: {
+        council: true,
+        lecturer: true
+      }
+    })
+
   }
 
   findOne(id: number) {

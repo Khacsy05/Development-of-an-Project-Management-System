@@ -55,9 +55,10 @@ export default function TopicsApprovePage() {
             setSelectedRequest(null);
             setFeedback('');
             fetchCapstoneRequest(currentPage);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Lỗi khi chấp nhận yêu cầu:", error);
-            toast.error("Không thể phê duyệt yêu cầu");
+            const errorMsg = error?.response?.data?.message || "Không thể phê duyệt yêu cầu";
+            toast.error(errorMsg);
         } finally {
             setIsSubmitting(false);
         }
@@ -74,9 +75,10 @@ export default function TopicsApprovePage() {
             setSelectedRequest(null);
             setFeedback('');
             fetchCapstoneRequest(currentPage);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Lỗi khi từ chối yêu cầu:", error);
-            toast.error("Không thể từ chối yêu cầu");
+            const errorMsg = error?.response?.data?.message || "Không thể từ chối yêu cầu";
+            toast.error(errorMsg);
         } finally {
             setIsSubmitting(false);
         }

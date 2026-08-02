@@ -1,14 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
 import { CouncilEvalutionService } from './councils-evaluation.service';
 import { CreateCouncilEvalutionDto } from './dto/create-council-evalution.dto';
 import { UpdateCouncilEvalutionDto } from './dto/update-council-evalution.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { QueryCouncilsEvaluationDto } from './dto/query-councils-evaluation.dto';
 
 @Controller('council-evalution')
 export class CouncilEvalutionController {
-  constructor(private readonly councilEvalutionService: CouncilEvalutionService) {}
+  constructor(private readonly councilEvalutionService: CouncilEvalutionService) { }
 
   @Post()
   create(@Body() createCouncilEvalutionDto: CreateCouncilEvalutionDto) {
@@ -16,8 +17,8 @@ export class CouncilEvalutionController {
   }
 
   @Get()
-  findAll() {
-    return this.councilEvalutionService.findAll();
+  findAll(@Query() query: QueryCouncilsEvaluationDto) {
+    return this.councilEvalutionService.findAll(query);
   }
 
   @Get(':id')
@@ -27,7 +28,7 @@ export class CouncilEvalutionController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("Lecturer","Student")
+  @Roles("Lecturer", "Student")
   update(@Param('id') id: string, @Body() updateCouncilEvalutionDto: UpdateCouncilEvalutionDto, @Req() req: any) {
     return this.councilEvalutionService.update(+id, updateCouncilEvalutionDto, req);
   }

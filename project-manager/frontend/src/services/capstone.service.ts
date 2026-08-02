@@ -65,7 +65,7 @@ export async function updateCapstoneRequest(id: string, data: GetCapstonesReques
     }
 }
 
-export async function updateCapstoneSubmission(id: string, data: GetCapstonesRequestUpdateDto) {
+export async function updateCapstoneSubmission(id: string, data: any) {
     try {
         const response = await apiClient.patch(`/capstones-submission/${id}`, data);
         return response.data
@@ -94,6 +94,16 @@ export async function getCapstoneSubmissions(params?: { lecturer_id?: string; mi
         return response.data;
     } catch (error) {
         console.error('Lỗi khi lấy danh sách bài nộp:', error);
+        throw error;
+    }
+}
+
+export async function assignCouncil(capstoneId: string, council_id: string) {
+    try {
+        const response = await apiClient.patch(`/capstones/${capstoneId}/assignCouncil`, { council_id });
+        return response.data
+    } catch (error) {
+        console.error('Lỗi khi gán hội đồng:', error);
         throw error;
     }
 }

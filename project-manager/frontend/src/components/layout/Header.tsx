@@ -44,38 +44,40 @@ export default function Header({ onLogout }: HeaderProps) {
         </button>
 
         {/* Hồ sơ Người dùng */}
-        <div className="flex items-center gap-3 border-l border-white/20 pl-6">
-          <div className="flex flex-col text-right">
-            <span className="font-semibold text-sm tracking-wide">
-              {userName || 'Nguyễn Ngọc Trà My'}
-            </span>
-            <span className="text-[11px] text-blue-200 font-medium px-2 py-0.5 bg-white/10 rounded-full inline-block mt-0.5 self-end">
-              {role === 'Lecturer' ? 'Giảng Viên' : role === 'Student' ? 'Sinh Viên' : 'Quản Trị'}
-            </span>
-          </div>
-
-          {/* Avatar */}
-          <div className="group relative">
-            <div className="w-10 h-10 bg-teal-600 border-2 border-white/40 text-white font-bold rounded-full flex items-center justify-center cursor-pointer shadow-md hover:scale-105 transition-all">
-              {userName ? userName.charAt(0).toUpperCase() : 'N'}
+        {userName && (
+          <div className="flex items-center gap-3 border-l border-white/20 pl-6">
+            <div className="flex flex-col text-right">
+              <span className="font-semibold text-sm tracking-wide">
+                {userName}
+              </span>
+              <span className="text-[11px] text-blue-200 font-medium px-2 py-0.5 bg-white/10 rounded-full inline-block mt-0.5 self-end">
+                {role === 'Lecturer' ? 'Giảng Viên' : role === 'Student' ? 'Sinh Viên' : 'Quản Trị'}
+              </span>
             </div>
 
-            {/* Menu Đăng xuất nhanh khi hover */}
-            <div className="absolute right-0 pt-2 w-48 hidden group-hover:block z-50">
-              <div className="bg-white rounded-xl shadow-xl border border-gray-100 py-1 overflow-hidden">
-                <button
-                  onClick={onLogout}
-                  className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:font-semibold flex items-center gap-2 transition-all"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  Đăng xuất
-                </button>
+            {/* Avatar */}
+            <div className="group relative">
+              <div className="w-10 h-10 bg-teal-600 border-2 border-white/40 text-white font-bold rounded-full flex items-center justify-center cursor-pointer shadow-md hover:scale-105 transition-all">
+                {userName.charAt(0).toUpperCase()}
+              </div>
+
+              {/* Menu Đăng xuất nhanh khi hover */}
+              <div className="absolute right-0 pt-2 w-48 hidden group-hover:block z-50">
+                <div className="bg-white rounded-xl shadow-xl border border-gray-100 py-1 overflow-hidden">
+                  <button
+                    onClick={onLogout}
+                    className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:font-semibold flex items-center gap-2 transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Đăng xuất
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </header>
   );

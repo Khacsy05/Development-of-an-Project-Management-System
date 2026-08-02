@@ -5,4 +5,5 @@ export class CapstoneQuery {
     lecturer_id?: string
     page?: number
     limit?: number
+    faculty_id?: string
 }

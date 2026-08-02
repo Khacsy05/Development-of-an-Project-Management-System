@@ -6,13 +6,13 @@ import jwt from "jsonwebtoken"
 import * as Express from 'express';
 @Injectable()
 export class AuthService {
-    constructor(private prisma: PrismaService){}
+    constructor(private prisma: PrismaService) { }
 
-    async login(loginDto: LoginDto,response : Express.Response){
-        const {username,password} = loginDto;
+    async login(loginDto: LoginDto, response: Express.Response) {
+        const { username, password } = loginDto;
         const user = await this.prisma.user.findUnique({
-            where: {username: username},
-            include : {
+            where: { username: username },
+            include: {
                 role: true,
                 managed_faculty: true
             }
@@ -20,6 +20,10 @@ export class AuthService {
         if (!user) {
             throw new UnauthorizedException('Email hoặc mật khẩu không chính xác!');
         }
+
+        const faculty = await this.prisma.faculty.findUnique({
+            where: { dean_id: user.user_id },
+        })
 
         // 3. So sánh mật khẩu (Thực tế bạn nên dùng thư viện 'bcrypt' để hash mật khẩu)
         const isPasswordMatched = await bcrypt.compare(password, user.password);
@@ -34,6 +38,7 @@ export class AuthService {
                 email: user.email,
                 role: user.role.role_name,
                 isDean: !!user.managed_faculty,
+                faculty_id: faculty?.faculty_id,
             },
             process.env.JWT_ACCESS_SECRET || "ACCESS_SECRET_KEY",
             { expiresIn: "15m" }
@@ -46,6 +51,7 @@ export class AuthService {
                 email: user.email,
                 role: user.role.role_name,
                 isDean: !!user.managed_faculty,
+                faculty_id: faculty?.faculty_id,
             },
             process.env.JWT_REFRESH_SECRET || "REFRESH_SECRET_KEY",
             { expiresIn: "7d" }
@@ -72,7 +78,7 @@ export class AuthService {
             },
         };
     }
-    async refreshTokens(request: Express.Request, response: Express.Response) { 
+    async refreshTokens(request: Express.Request, response: Express.Response) {
         const refreshToken = request.cookies?.['refreshToken'];
         try {
             // 🔍 A. Kiểm tra chữ ký và hạn sử dụng của Refresh Toke
@@ -85,7 +91,7 @@ export class AuthService {
             // 🔍 B. (Tùy chọn) Kiểm tra User trong CSDL xem có còn tồn tại/bị khóa hay không
             const user = await this.prisma.user.findUnique({
                 where: { user_id: BigInt(payload.id) },
-                include: { 
+                include: {
                     role: true,
                     managed_faculty: true
                 }
@@ -94,6 +100,9 @@ export class AuthService {
             if (!user) {
                 throw new UnauthorizedException('Người dùng không còn tồn tại');
             }
+            const faculty = await this.prisma.faculty.findUnique({
+                where: { dean_id: user.user_id },
+            })
 
             // 💡 Nếu hợp lệ hoàn toàn -> Tạo cặp Token mới
             const newAccessToken = jwt.sign(
@@ -103,21 +112,23 @@ export class AuthService {
                     email: user.email,
                     role: user.role.role_name,
                     isDean: !!user.managed_faculty,
+                    faculty_id: faculty?.faculty_id,
                 },
                 process.env.JWT_ACCESS_SECRET || 'ACCESS_SECRET_KEY',
                 { expiresIn: '15m' }
             );
 
             const newRefreshToken = jwt.sign(
-            {
-                id: user.user_id,
-                name: user.fullname,
-                email: user.email,
-                role: user.role.role_name,
-                isDean: !!user.managed_faculty,
-            },
-            process.env.JWT_REFRESH_SECRET || 'REFRESH_SECRET_KEY',
-            { expiresIn: '7d' }
+                {
+                    id: user.user_id,
+                    name: user.fullname,
+                    email: user.email,
+                    role: user.role.role_name,
+                    isDean: !!user.managed_faculty,
+                    faculty_id: faculty?.faculty_id,
+                },
+                process.env.JWT_REFRESH_SECRET || 'REFRESH_SECRET_KEY',
+                { expiresIn: '7d' }
             );
 
             response.cookie('refreshToken', newRefreshToken, {

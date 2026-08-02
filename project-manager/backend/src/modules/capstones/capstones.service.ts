@@ -57,7 +57,7 @@ export class CapstonesService {
   }
 
   async findAll(query: CapstoneQuery) {
-    const { status, lecturer_id, page, limit } = query
+    const { status, lecturer_id, faculty_id, page, limit } = query
     const pageNumber = Math.max(1, Number(page) || 1)
     const limitNumber = Math.max(1, Number(limit) || 6)
     const skip = (pageNumber - 1) * limitNumber
@@ -67,6 +67,9 @@ export class CapstonesService {
     }
     if (lecturer_id) {
       where.lecturer_id = BigInt(lecturer_id)
+    }
+    if (faculty_id) {
+      where.faculty_id = BigInt(faculty_id)
     }
 
     const [capstone, total] = await this.prisma.$transaction([
@@ -81,7 +84,8 @@ export class CapstonesService {
             include: {
               milestone: true
             }
-          }
+          },
+          faculty: true,
         },
         orderBy: [
           {
@@ -101,9 +105,9 @@ export class CapstonesService {
         ...plainItem,
         student: plainItem.student
           ? {
-              ...plainItem.student,
-              user: plainItem.student, // Map user to itself so frontend's capstone.student.user works
-            }
+            ...plainItem.student,
+            user: plainItem.student, // Map user to itself so frontend's capstone.student.user works
+          }
           : null,
       };
     });
@@ -179,12 +183,33 @@ export class CapstonesService {
     if (!capstone) {
       throw new BadRequestException('Hồ sơ đồ án không tồn tại');
     }
-    if (String(user.id) !== String(capstone.student_id) || user.role !== 'Student') {
+    if (user.role === 'Student') {
+      if (String(user.id) !== String(capstone.student_id)) {
+        throw new BadRequestException('Bạn không có quyền sửa đồ án này');
+      }
+    } else if (user.role === 'Lecturer') {
+      if (String(user.id) !== String(capstone.lecturer_id)) {
+        throw new BadRequestException('Bạn không có quyền sửa đồ án này');
+      }
+    } else {
       throw new BadRequestException('Bạn không có quyền sửa đồ án này');
+    }
+
+    let capstoneStatus = capstone.status;
+    if (user.role === 'Student') {
+      if (status === 'CANCEL_REQUESTED' && !capstone.lecturer_id) {
+        capstoneStatus = 'CANCEL';
+      } else {
+        capstoneStatus = lecturer_id ? 'PENDING_LECTURER' : (topic_id ? 'PENDING_FACULTY' : (status ?? capstone.status));
+      }
+    } else if (user.role === 'Lecturer') {
+      if (status) {
+        capstoneStatus = status;
+      }
     }
     return await this.prisma.$transaction(async (tx) => {
       const updateData: any = {
-        status: lecturer_id ? 'PENDING_LECTURER' : (topic_id ? 'PENDING_FACULTY' : status),
+        status: capstoneStatus,
         defense_order,
         final_report_path,
         instructor_grade,

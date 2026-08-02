@@ -8,6 +8,7 @@ interface JwtPayload {
     role: 'Admin' | 'Student' | 'Lecturer';
     isDean: boolean;
     exp: number;
+    faculty_id: string | null;
 }
 
 interface AuthStore {
@@ -19,6 +20,7 @@ interface AuthStore {
     userName: string | null;
     userEmail: string | null;
     isInitializing: boolean;
+    faculty_id: string | null;
 
     setAuth: (accessToken: string) => void;
     logout: () => void;
@@ -35,7 +37,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     userName: null,
     userEmail: null,
     isInitializing: true,
-
+    faculty_id: null,
     setAuth: (accessToken: string) => {
         try {
             const decoded = jwtDecode<JwtPayload>(accessToken);
@@ -48,6 +50,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
                 sidebarMode: state.sidebarMode || 'lecturer',
                 userName: decoded.name,
                 userEmail: decoded.email,
+                faculty_id: decoded.faculty_id,
                 isInitializing: false,
             }));
         } catch (error) {

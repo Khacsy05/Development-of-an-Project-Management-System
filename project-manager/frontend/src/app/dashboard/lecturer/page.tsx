@@ -1,8 +1,10 @@
-import React from 'react'
+"use client"
+import { useAuthStore } from '@/store/useAuthStore';
 
 const page = () => {
+    const userName = useAuthStore((state) => state.userName)
     return (
-        <div>page GV</div>
+        <div>Chào bạn, {userName}</div>
     )
 }
 

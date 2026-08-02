@@ -1,14 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { CouncilsService } from './councils.service';
 import { CreateCouncilDto } from './dto/create-council.dto';
 import { UpdateCouncilDto } from './dto/update-council.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CouncilMemberQuery } from './dto/query-council.dto';
 
 @Controller('councils')
 export class CouncilsController {
-  constructor(private readonly councilsService: CouncilsService) {}
+  constructor(private readonly councilsService: CouncilsService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -18,8 +19,9 @@ export class CouncilsController {
   }
 
   @Get()
-  findAll() {
-    return this.councilsService.findAll();
+
+  findAll(@Query() query: CouncilMemberQuery) {
+    return this.councilsService.findAll(query);
   }
 
   @Get(':id')

@@ -19,6 +19,17 @@ export default function Sidebar({ onLogout }: SidebarProps) {
       ? (sidebarMode === 'dean' ? '/dashboard/faculty' : '/dashboard/lecturer')
       : '/dashboard/admin');
 
+  // Tự động đồng bộ hóa sidebarMode dựa trên đường dẫn thực tại để tránh bị nhảy vai trò khi reload / refresh token
+  React.useEffect(() => {
+    if (role === 'Lecturer' && isDean) {
+      if (pathname.startsWith('/dashboard/faculty')) {
+        setSidebarMode('dean');
+      } else if (pathname.startsWith('/dashboard/lecturer')) {
+        setSidebarMode('lecturer');
+      }
+    }
+  }, [pathname, role, isDean, setSidebarMode]);
+
   // 1. Menu cho Sinh Viên (Student) - Theo ảnh chụp thực tế
   const studentMenu = [
     {

@@ -88,7 +88,14 @@ export async function uploadFile(file: File): Promise<{ file_path: string }> {
     return response.data;
 }
 
-export async function getCapstoneSubmissions(params?: { lecturer_id?: string; milestone_type?: 'progress' | 'final' }) {
+export async function getCapstoneSubmissions(params?: {
+    lecturer_id?: string;
+    milestone_type?: 'progress' | 'final';
+    status?: string;
+    has_file?: boolean;
+    page?: number;
+    limit?: number;
+}) {
     try {
         const response = await apiClient.get('/capstones-submission', { params });
         return response.data;

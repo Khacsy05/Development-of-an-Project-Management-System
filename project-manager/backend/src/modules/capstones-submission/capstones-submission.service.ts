@@ -13,7 +13,11 @@ export class CapstonesSubmissionService {
   }
 
   async findAll(query: CapstoneSubmissionQuery) {
-    const { lecturer_id, milestone_type } = query;
+    const { lecturer_id, milestone_type, page, limit, status, has_file } = query;
+    const pageNumber = Math.max(1, Number(page) || 1);
+    const limitNumber = Math.max(1, Number(limit) || 10);
+    const skip = (pageNumber - 1) * limitNumber;
+    
     const where: any = {};
 
     if (lecturer_id) {
@@ -30,23 +34,37 @@ export class CapstonesSubmissionService {
       where.milestone_id = 4n;
     }
 
-    const submissions = await this.prisma.capstoneSubmission.findMany({
-      where,
-      include: {
-        milestone: true,
-        capstone: {
-          include: {
-            student: true,
-            topic: true
-          }
-        }
-      },
-      orderBy: {
-        created_at: 'desc'
-      }
-    });
+    if (status) {
+      where.status = status;
+    }
 
-    return submissions.map(sub => {
+    if (has_file !== undefined) {
+      const hasFileBool = String(has_file) === 'true';
+      where.file_path = hasFileBool ? { not: null } : null;
+    }
+
+    const [submissions, total] = await this.prisma.$transaction([
+      this.prisma.capstoneSubmission.findMany({
+        where,
+        skip,
+        take: limitNumber,
+        include: {
+          milestone: true,
+          capstone: {
+            include: {
+              student: true,
+              topic: true
+            }
+          }
+        },
+        orderBy: {
+          created_at: 'desc'
+        }
+      }),
+      this.prisma.capstoneSubmission.count({ where })
+    ]);
+
+    const mappedData = submissions.map(sub => {
       const plainSub = JSON.parse(JSON.stringify(sub));
       if (plainSub.capstone && plainSub.capstone.student) {
         plainSub.capstone.student = {
@@ -56,6 +74,16 @@ export class CapstonesSubmissionService {
       }
       return plainSub;
     });
+
+    return {
+      data: mappedData,
+      pagination: {
+        page: pageNumber,
+        limit: limitNumber,
+        total,
+        totalPages: Math.ceil(total / limitNumber),
+      }
+    };
   }
 
   findOne(id: number) {

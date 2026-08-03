@@ -5,10 +5,13 @@ import { getCapstoneSubmissions, updateCapstoneSubmission } from '@/services/cap
 import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from 'sonner';
 
+import { useCacheStore } from '@/store/useCacheStore';
+
 export default function LecturerGradesPage() {
     const userId = useAuthStore((state) => state.userId);
-    const [submissions, setSubmissions] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const { grades, setGrades } = useCacheStore();
+    const [submissions, setSubmissions] = useState<any[]>(grades || []);
+    const [isLoading, setIsLoading] = useState(!grades);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Modal state for grading final report
@@ -19,12 +22,15 @@ export default function LecturerGradesPage() {
 
     const fetchGrades = async () => {
         if (!userId) return;
-        setIsLoading(true);
+        if (!grades) {
+            setIsLoading(true);
+        }
         try {
             // Lấy trực tiếp danh sách bài nộp cuối kỳ (Milestone 4) từ backend
-            const res = await getCapstoneSubmissions({ lecturer_id: userId, milestone_type: 'final' });
+            const res = await getCapstoneSubmissions({ lecturer_id: userId, milestone_type: 'final', limit: 100 });
             const finalSubmissions = Array.isArray(res) ? res : (res?.data || []);
             setSubmissions(finalSubmissions);
+            setGrades(finalSubmissions);
         } catch (error) {
             console.error('Lỗi khi tải danh sách chấm điểm:', error);
             toast.error('Không thể tải danh sách chấm điểm đồ án');
@@ -34,7 +40,9 @@ export default function LecturerGradesPage() {
     };
 
     useEffect(() => {
-        fetchGrades();
+        if (userId) {
+            fetchGrades();
+        }
     }, [userId]);
 
     const handleSaveGrade = async (e: React.FormEvent) => {

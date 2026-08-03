@@ -58,17 +58,38 @@ export class CouncilsMembersService {
   }
 
   async findAll(params: CouncilMemberQuery) {
-    const { lecturer_id } = params
+    const { lecturer_id, page, limit } = params
+    const pageNumber = Math.max(1, Number(page) || 1)
+    const limitNumber = Math.max(1, Number(limit) || 6)
+    const skip = (pageNumber - 1) * limitNumber
     const where: any = {}
     if (lecturer_id) where.lecturer_id = BigInt(lecturer_id)
-    return await this.prisma.councilMember.findMany({
-      where,
-      include: {
-        council: true,
-        lecturer: true
-      }
-    })
 
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.councilMember.findMany({
+        where,
+        skip,
+        take: limitNumber,
+        include: {
+          council: true,
+          lecturer: true
+        },
+        orderBy: {
+          position: 'asc'
+        }
+      }),
+      this.prisma.councilMember.count({ where })
+    ])
+
+    return {
+      data: data,
+      pagination: {
+        page: pageNumber,
+        limit: limitNumber,
+        total,
+        totalPages: Math.ceil(total / limitNumber),
+      },
+    }
   }
 
   findOne(id: number) {

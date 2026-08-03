@@ -13,30 +13,55 @@ export class CouncilEvalutionService {
   }
 
   async findAll(query: QueryCouncilsEvaluationDto) {
-    const { lecturer_id } = query
+    const { lecturer_id, page, limit, is_graded } = query
+    const pageNumber = Math.max(1, Number(page) || 1)
+    const limitNumber = Math.max(1, Number(limit) || 6)
+    const skip = (pageNumber - 1) * limitNumber
+
     const where: any = {
       members_id: lecturer_id ? BigInt(lecturer_id) : undefined
     }
-    return await this.prisma.councilEvaluation.findMany({
-      where,
-      include: {
-        capstone: {
-          include: {
-            topic: true,
-            student: true
-          }
-        },
-        council: {
-          include: {
-            members: {
-              include: {
-                lecturer: true
+
+    if (is_graded !== undefined) {
+      const isGradedBool = String(is_graded) === 'true';
+      where.grade = isGradedBool ? { not: null } : null;
+    }
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.councilEvaluation.findMany({
+        where,
+        skip,
+        take: limitNumber,
+        include: {
+          capstone: {
+            include: {
+              topic: true,
+              student: true
+            }
+          },
+          council: {
+            include: {
+              members: {
+                include: {
+                  lecturer: true
+                }
               }
             }
-          }
-        },
+          },
+        }
+      }),
+      this.prisma.councilEvaluation.count({ where })
+    ])
+
+    return {
+      data,
+      pagination: {
+        page: pageNumber,
+        limit: limitNumber,
+        total,
+        totalPages: Math.ceil(total / limitNumber),
       }
-    });
+    }
   }
 
   findOne(id: number) {

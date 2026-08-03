@@ -7,8 +7,11 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { GetCapstoneRequestDto } from '@/type/capstone';
 
+import { useCacheStore } from '@/store/useCacheStore';
+
 export default function CapstonesPage() {
-    const [capstoneRequests, setCapstoneRequests] = useState<GetCapstoneRequestDto[]>([]);
+    const { confirmRequests, setConfirmRequests } = useCacheStore();
+    const [capstoneRequests, setCapstoneRequests] = useState<GetCapstoneRequestDto[]>(confirmRequests || []);
     const userId = useAuthStore((state) => state.userId);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -30,6 +33,7 @@ export default function CapstonesPage() {
                 limit,
             });
             setCapstoneRequests(result.data);
+            setConfirmRequests(result.data);
             setCurrentPage(result.pagination.page);
             setTotalPages(result.pagination.totalPages);
             setTotalItems(result.pagination.total);

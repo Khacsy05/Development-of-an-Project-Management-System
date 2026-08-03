@@ -5,9 +5,12 @@ import { useAuthStore } from '@/store/useAuthStore'
 import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
+import { useCacheStore } from '@/store/useCacheStore'
+
 const Page = () => {
-    const [councilEvaluation, setCouncilEvaluation] = useState<any[]>([])
-    const [isLoading, setIsLoading] = useState(true)
+    const { reviews, setReviews } = useCacheStore()
+    const [councilEvaluation, setCouncilEvaluation] = useState<any[]>(reviews || [])
+    const [isLoading, setIsLoading] = useState(!reviews)
     const userId = useAuthStore((state) => state.userId)
     const isInitializing = useAuthStore((state) => state.isInitializing)
 
@@ -19,9 +22,14 @@ const Page = () => {
 
     const fetchCouncilEvaluation = async () => {
         try {
-            setIsLoading(true)
-            const res = await getCouncilEvaluations(userId || undefined)
-            setCouncilEvaluation(res || [])
+            if (!userId) return
+            if (!reviews) {
+                setIsLoading(true)
+            }
+            const res = await getCouncilEvaluations({ lecturer_id: userId, limit: 100 })
+            const data = Array.isArray(res) ? res : (res?.data || []);
+            setCouncilEvaluation(data)
+            setReviews(data)
         } catch (error) {
             console.error('Error fetching council evaluation:', error)
             toast.error('Không thể tải danh sách chấm điểm hội đồng.')

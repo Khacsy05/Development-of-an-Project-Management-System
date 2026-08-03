@@ -6,22 +6,29 @@ import { getCapstoneLists, updatedCapstone } from '@/services/capstone.service'
 import { toast } from 'sonner'
 import { CapstoneStatus } from '@/type/capstone'
 
+import { useCacheStore } from '@/store/useCacheStore'
+
 export default function LecturerCancelsPage() {
-    const [capstones, setCapstones] = useState<any[]>([])
-    const [isLoading, setIsLoading] = useState(true)
+    const { cancels, setCancels } = useCacheStore()
+    const [capstones, setCapstones] = useState<any[]>(cancels || [])
+    const [isLoading, setIsLoading] = useState(!cancels)
     const userId = useAuthStore((state) => state.userId)
     const isInitializing = useAuthStore((state) => state.isInitializing)
 
     const fetchCancelRequests = async () => {
         if (!userId) return
-        setIsLoading(true)
+        if (!cancels) {
+            setIsLoading(true)
+        }
         try {
             // Lấy danh sách các đồ án có trạng thái CANCEL_REQUESTED của giảng viên này
-            const res = await getCapstoneLists({ 
-                lecturer_id: userId, 
-                status: 'CANCEL_REQUESTED' as CapstoneStatus 
+            const res = await getCapstoneLists({
+                lecturer_id: userId,
+                status: 'CANCEL_REQUESTED' as CapstoneStatus
             })
-            setCapstones(res.data || [])
+            const data = res.data || [];
+            setCapstones(data)
+            setCancels(data)
         } catch (error) {
             console.error('Lỗi khi tải yêu cầu hủy:', error)
             toast.error('Không thể tải danh sách yêu cầu hủy.')
@@ -45,7 +52,7 @@ export default function LecturerCancelsPage() {
             // Nếu đồng ý thì thành CANCEL, nếu không thì chuyển lại PENDING
             const nextStatus = accept ? 'CANCEL' : 'PENDING'
             await updatedCapstone(capstoneId, { status: nextStatus })
-            
+
             toast.success(accept ? 'Đã duyệt đồng ý hủy đồ án!' : 'Đã từ chối yêu cầu hủy đồ án!')
             fetchCancelRequests()
         } catch (error: any) {

@@ -8,8 +8,11 @@ import Sidebar from '@/components/layout/Sidebar';
 import Footer from '@/components/layout/Footer';
 import apiClient from '@/lib/apiClient';
 
+import { useCacheStore } from '@/store/useCacheStore';
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { logout } = useAuthStore();
+  const { clearCache } = useCacheStore();
 
   const handleLogout = async () => {
     // 1. Hiển thị Loading Toast lập tức để phản hồi người dùng
@@ -17,6 +20,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     // 2. Xóa trạng thái đăng nhập ở RAM ngay để giao diện đổi sang trạng thái Loading
     logout();
+    clearCache();
 
     try {
       // 3. Gọi API xóa HttpOnly Cookie phía Backend
@@ -31,18 +35,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 text-gray-800">
+    <div className="flex flex-col h-screen bg-gray-50 text-gray-800 overflow-hidden">
       <Toaster richColors position="top-right" />
 
       {/* 1. HEADER COMPONENT */}
       <Header onLogout={handleLogout} />
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         {/* 2. SIDEBAR COMPONENT */}
         <Sidebar onLogout={handleLogout} />
 
         {/* 3. MAIN CONTENT AREA */}
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className="flex-1 p-8 overflow-y-auto bg-gray-50">
           {children}
         </main>
       </div>

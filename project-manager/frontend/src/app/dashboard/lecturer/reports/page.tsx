@@ -5,9 +5,12 @@ import { getCapstoneSubmissions, updateCapstoneSubmission } from '@/services/cap
 import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from 'sonner';
 
+import { useCacheStore } from '@/store/useCacheStore';
+
 export default function ReportsPage() {
-    const [capstones, setCapstones] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const { reports, setReports } = useCacheStore();
+    const [capstones, setCapstones] = useState<any[]>(reports || []);
+    const [isLoading, setIsLoading] = useState(!reports);
     const userId = useAuthStore((state) => state.userId);
 
     // States cho modal đánh giá
@@ -18,9 +21,11 @@ export default function ReportsPage() {
 
     const fetchReports = async () => {
         if (!userId) return;
-        setIsLoading(true);
+        if (!reports) {
+            setIsLoading(true);
+        }
         try {
-            const res = await getCapstoneSubmissions({ lecturer_id: userId, milestone_type: 'progress' });
+            const res = await getCapstoneSubmissions({ lecturer_id: userId, milestone_type: 'progress', limit: 100 });
             const submissions = Array.isArray(res) ? res : (res?.data || []);
 
             // Nhóm các bài nộp theo từng đồ án/sinh viên để hiển thị trực quan
@@ -38,7 +43,9 @@ export default function ReportsPage() {
                 }
             });
 
-            setCapstones(Object.values(groupedMap));
+            const capstonesList = Object.values(groupedMap);
+            setCapstones(capstonesList);
+            setReports(capstonesList);
         } catch (error) {
             console.error('Lỗi khi tải báo cáo:', error);
             toast.error('Không thể tải danh sách báo cáo đồ án');
@@ -211,7 +218,7 @@ export default function ReportsPage() {
                                                             )}
 
                                                             {/* Quick action button */}
-                                                            {sub.file_path && (
+                                                            {sub.status === 'PENDING' && sub.file_path && (
                                                                 <button
                                                                     onClick={() => {
                                                                         setSelectedSubmission(sub);

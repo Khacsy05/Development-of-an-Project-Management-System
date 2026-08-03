@@ -1,4 +1,5 @@
 import apiClient from "@/lib/apiClient";
+import { GetCouncilEvaluationsQueryDto } from "@/type/council";
 
 export async function getCounciMember(lecturer_id?: string) {
     try {
@@ -30,18 +31,15 @@ export async function getCouncilList(faculty_id?: string) {
     }
 }
 
-export async function getCouncilEvaluations(lecturer_id?: string) {
+export async function getCouncilEvaluations(query?: GetCouncilEvaluationsQueryDto) {
     try {
         const response = await apiClient.get(`/council-evalution`, {
-            params: {
-                lecturer_id
-            }
+            params: query
         });
-        console.log('Danh sách đánh giá hội đồng:', response.data);
         return response.data;
-    } catch (error) {
-        console.error('Lỗi khi lấy danh sách đánh giá hội đồng:', error);
-        throw error;
+    } catch (error: any) {
+        console.error('Lỗi khi lấy danh sách đánh giá hội đồng:', error.response?.data?.message);
+        throw new Error(error.response?.data?.message);
     }
 }
 

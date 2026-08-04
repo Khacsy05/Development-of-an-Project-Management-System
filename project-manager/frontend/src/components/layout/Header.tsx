@@ -15,11 +15,7 @@ export default function Header({ onLogout }: HeaderProps) {
       <div className="flex items-center gap-4">
         {/* Logo Trường */}
         <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-1.5 shadow-inner">
-          <img
-            src="https://www.tlu.edu.vn/Portals/0/images/logo.png"
-            alt="TLU Logo"
-            className="w-full h-full object-contain"
-          />
+
         </div>
         <div>
           <h1 className="text-xl font-bold tracking-wide uppercase">

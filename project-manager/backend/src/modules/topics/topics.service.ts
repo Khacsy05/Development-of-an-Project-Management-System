@@ -7,29 +7,29 @@ import { TopicQuery } from './dto/query-topic.dto';
 
 @Injectable()
 export class TopicService {
-  constructor(private prisma: PrismaService) {}
-  async create(createTopicDto: CreateTopicDto, req:any) {
+  constructor(private prisma: PrismaService) { }
+  async create(createTopicDto: CreateTopicDto, req: any) {
     const user = req.user as any
-    const {expertise_id,faculty_id,description,technologies,title} = createTopicDto
+    const { expertise_id, description, technologies, title } = createTopicDto
 
-    if(!expertise_id || !faculty_id || !technologies || !title){
+    if (!expertise_id || !technologies || !title) {
       throw new BadRequestException('Vui long nhap day du du lieu');
     }
     const expertiseBigInt = BigInt(expertise_id)
-    const facultyBigInt = BigInt(faculty_id)
+    const facultyBigInt = BigInt(user.faculty_id)
     const isExisExpertise = await this.prisma.expertise.findUnique({
-      where: {expertise_id: expertiseBigInt}
+      where: { expertise_id: expertiseBigInt }
     })
 
-    if(!isExisExpertise){
+    if (!isExisExpertise) {
       throw new BadRequestException('Chuyen mon khong ton tai');
     }
 
     const isExisFaculty = await this.prisma.faculty.findUnique({
-      where: {faculty_id: facultyBigInt}
+      where: { faculty_id: facultyBigInt }
     })
 
-    if(!isExisFaculty){
+    if (!isExisFaculty) {
       throw new BadRequestException('Khoa khong ton tai');
     }
 
@@ -43,31 +43,37 @@ export class TopicService {
         faculty_id: facultyBigInt,
         expertise_id: expertiseBigInt,
         description: description,
-        is_bank_topic : user.role === "Student" ? false : true, 
+        is_bank_topic: user.role === "Student" ? false : true,
         status: initialStatus,
         title: title,
         technologies: technologies
       }
     });
   }
-  private toBoolean(isAvailable? : string) : boolean | undefined{
+  private toBoolean(isAvailable?: string): boolean | undefined {
     return isAvailable === 'true' ? true : isAvailable === "false" ? false : undefined
-  } 
+  }
 
   async findAll(query: TopicQuery) {
-    const {isAvailable,title,page = 1, limit = 6} = query
+    const { isAvailable, title, page = 1, limit = 6, facultyId } = query
     const isAvailableBoolean = this.toBoolean(isAvailable)
     const pageNumber = Math.max(1, Number(page) || 1)
     const limitNumber = Math.max(1, Number(limit) || 6)
     const titleNormalized = title?.trim();
     const skip = (pageNumber - 1) * limitNumber;
-    const where = {
-      is_available: isAvailableBoolean,
-      title: title ? {
-        contains: titleNormalized,
-      } : undefined
+    const where: any = {
+      is_available: isAvailableBoolean
     }
-    const [topic,total] = await this.prisma.$transaction([
+
+    if (facultyId) {
+      where.faculty_id = BigInt(facultyId)
+    }
+    if (title) {
+      where.title = {
+        contains: titleNormalized,
+      }
+    }
+    const [topic, total] = await this.prisma.$transaction([
       this.prisma.topic.findMany({
         where,
         skip,
@@ -79,12 +85,21 @@ export class TopicService {
           {
             topic_id: "desc"
           }
-        ]
+        ],
+        include: {
+          faculty: true,
+          expertise: true,
+          creator: {
+            include: {
+              role: true
+            }
+          }
+        }
       }),
-      this.prisma.topic.count({where})
-       
+      this.prisma.topic.count({ where })
+
     ])
-    
+
     return {
       data: topic,
       pagination: {
@@ -94,9 +109,9 @@ export class TopicService {
         totalPages: Math.ceil(total / limitNumber),
       },
     }
-    
+
   }
-  
+
   async findOne(id: number) {
     return await this.prisma.topic.findUnique({
       where: {
@@ -105,17 +120,17 @@ export class TopicService {
     });
   }
 
-  
 
-  async update(id: number, updateTopicDto: UpdateTopicDto,req: any) {
+
+  async update(id: number, updateTopicDto: UpdateTopicDto, req: any) {
     const user = req.user
     const topicBigInt = BigInt(id)
-    const {description,expertise_id,technologies,title} = updateTopicDto
+    const { description, expertise_id, technologies, title } = updateTopicDto
     const isExisTopic = await this.prisma.topic.findUnique({
-      where: {topic_id: topicBigInt},
-      include: {faculty: true, capstones: true}
+      where: { topic_id: topicBigInt },
+      include: { faculty: true, capstones: true }
     })
-    if(!isExisTopic){
+    if (!isExisTopic) {
       throw new BadRequestException('De tai khong ton tai');
     }
 
@@ -140,28 +155,28 @@ export class TopicService {
     }
 
     return await this.prisma.topic.update({
-    where: { topic_id: topicBigInt },
-    data: {
-      ...(title && { title }),
-      ...(description !== undefined && { description }),
-      ...(technologies && { technologies }),
-      ...(expertise_id && { expertise_id: BigInt(expertise_id) }),
-    },
-  });
+      where: { topic_id: topicBigInt },
+      data: {
+        ...(title && { title }),
+        ...(description !== undefined && { description }),
+        ...(technologies && { technologies }),
+        ...(expertise_id && { expertise_id: BigInt(expertise_id) }),
+      },
+    });
   }
 
-  async approvedTopic(id: number, updateTopicDto: UpdateTopicDto,req: any) {
+  async approvedTopic(id: number, updateTopicDto: UpdateTopicDto, req: any) {
     const user = req.user
     const topicBigInt = BigInt(id)
     const isExisTopic = await this.prisma.topic.findUnique({
-      where: {topic_id: topicBigInt},
-      include: {faculty: true}
+      where: { topic_id: topicBigInt },
+      include: { faculty: true }
     })
-    if(!isExisTopic){
+    if (!isExisTopic) {
       throw new BadRequestException('De tai khong ton tai');
     }
 
-    if(isExisTopic.status !== "PENDING"){
+    if (isExisTopic.status !== "PENDING") {
       throw new BadRequestException('De tai da duoc phe duyet');
     }
 
@@ -171,16 +186,40 @@ export class TopicService {
     if (!isAdmin && !isDean) {
       throw new ForbiddenException('Bạn không có quyền phê duyệt đề tài này');
     }
-    
+
     return await this.prisma.topic.update({
-      where: {topic_id: topicBigInt},
+      where: { topic_id: topicBigInt },
       data: {
-        status : "APPROVED"
+        status: "APPROVED"
       }
     });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} topic`;
+  async remove(id: number, req: any) {
+    const user = req.user;
+    const topicBigInt = BigInt(id);
+    const topic = await this.prisma.topic.findUnique({
+      where: { topic_id: topicBigInt },
+      include: { faculty: true, capstones: true }
+    });
+
+    if (!topic) {
+      throw new BadRequestException('Đề tài không tồn tại');
+    }
+
+    if (topic.capstones && topic.capstones.length > 0) {
+      throw new BadRequestException('Đề tài này đã được sinh viên nhận làm đồ án, không thể xóa!');
+    }
+
+    const isAdmin = user.role === 'Admin';
+    const isDean = topic.faculty?.dean_id && String(user.id) === String(topic.faculty.dean_id);
+
+    if (!isAdmin && !isDean) {
+      throw new ForbiddenException('Bạn không có quyền xóa đề tài này!');
+    }
+
+    return await this.prisma.topic.delete({
+      where: { topic_id: topicBigInt }
+    });
   }
 }

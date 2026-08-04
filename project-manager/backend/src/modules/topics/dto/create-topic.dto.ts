@@ -5,9 +5,9 @@ export class CreateTopicDto {
     @IsString()
     expertise_id!: string;
 
-    @IsEmpty()
-    @IsString()
-    faculty_id!: string;
+    // @IsEmpty()
+    // @IsString()
+    // faculty_id!: string;
 
     @IsEmpty()
     @IsString()

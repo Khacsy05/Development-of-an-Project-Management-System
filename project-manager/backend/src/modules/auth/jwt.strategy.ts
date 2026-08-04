@@ -36,6 +36,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       name: payload.name,
       email: payload.email,
       role: payload.role, // Truyền role_id để khớp với DB của bạn
+      faculty: payload.faculty_id,
+      faculty_id: payload.faculty_id,
     };
   }
 }

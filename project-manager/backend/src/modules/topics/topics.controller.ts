@@ -45,7 +45,9 @@ export class TopicController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.topicService.remove(+id);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("Lecturer")
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.topicService.remove(+id, req);
   }
 }

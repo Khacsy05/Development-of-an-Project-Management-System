@@ -4,7 +4,7 @@ import React from 'react';
 
 export default function Footer() {
   return (
-    <footer className="bg-[#3b4c80] text-gray-200 text-center py-6 text-sm border-t border-[#2d3a63] shadow-inner mt-auto">
+    <footer className="bg-[#3b4c80] text-gray-200 text-center py-2 text-sm border-t border-[#2d3a63] shadow-inner mt-auto">
       <div className="max-w-4xl mx-auto flex flex-col gap-2">
         <p className="font-bold text-white uppercase tracking-wide">
           TRƯỜNG ĐẠI HỌC THỦY LỢI - KHOA CÔNG NGHỆ THÔNG TIN

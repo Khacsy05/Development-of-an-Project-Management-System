@@ -26,7 +26,7 @@ export default function RegisterTopicPage() {
         try {
             setIsLoading(true);
             await fetchCapstone(userId);
-            const topicsData = await getTopicList({ isAvailable: 'true', limit: 100 });
+            const topicsData = await getTopicList({ isAvailable: 'true' });
             setTopics(topicsData.data || []);
         } catch (error) {
             console.error('Lỗi khi tải dữ liệu đề tài:', error);

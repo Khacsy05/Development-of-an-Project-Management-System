@@ -3,3 +3,4 @@ export interface GetCouncilEvaluationsQueryDto {
     page?: number;             // Phân trang
     limit?: number;            // Số lượng trên 1 trang
 }
+

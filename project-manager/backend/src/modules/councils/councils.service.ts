@@ -2,13 +2,15 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateCouncilDto } from './dto/create-council.dto';
 import { UpdateCouncilDto } from './dto/update-council.dto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CouncilMemberQuery } from './dto/query-council.dto';
+import { CouncilQueryDto } from './dto/query-council.dto';
 
 @Injectable()
 export class CouncilsService {
   constructor(private prisma: PrismaService) { }
-  async create(createCouncilDto: CreateCouncilDto) {
-    const { semester_id, rooms, buildings, faculty_id, name, start_date, end_date } = createCouncilDto
+  async create(createCouncilDto: CreateCouncilDto, req: any) {
+    const user = req.user;
+    const faculty_id = user?.faculty_id;
+    const { semester_id, rooms, buildings, name, start_date, end_date } = createCouncilDto
     const formattedStartDate = new Date(start_date.replace(' ', 'T'));
     const formattedEndDate = new Date(end_date.replace(' ', 'T'));
     const currentSemester = await this.prisma.semester.findUnique({
@@ -35,8 +37,9 @@ export class CouncilsService {
     });
   }
 
-  async findAll(query: CouncilMemberQuery) {
-    const { faculty_id } = query
+  async findAll(query: CouncilQueryDto, req: any) {
+    const user = req.user;
+    const faculty_id = user?.faculty_id;
     const where: any = {}
     if (faculty_id) where.faculty_id = BigInt(faculty_id)
     return await this.prisma.council.findMany({

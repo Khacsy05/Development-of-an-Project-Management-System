@@ -1,3 +1,3 @@
-export class CouncilMemberQuery {
-    faculty_id: string;
+export class CouncilQueryDto {
+
 }

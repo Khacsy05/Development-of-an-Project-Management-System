@@ -18,6 +18,7 @@ import { join } from 'path';
 import { CouncilsMembersModule } from './modules/councils-members/councils-members.module';
 import { MilestoneModule } from './modules/milestone/milestone.module';
 import { ExpertisesModule } from './modules/expertises/expertises.module';
+import { SemestersModule } from './modules/semesters/semesters.module';
 
 @Module({
   
@@ -26,7 +27,7 @@ import { ExpertisesModule } from './modules/expertises/expertises.module';
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads', // Đường dẫn tĩnh trên URL
     }),
-    PrismaModule, FacultiesModule, TopicModule, UsersModule, ClassesModule, AcademicYearsModule, CapstonesModule, CouncilsModule, AuthModule, CapstonesRequestModule, CapstonesSubmissionModule, CouncilEvalutionModule, CouncilsMembersModule, MilestoneModule, ExpertisesModule],
+    PrismaModule, FacultiesModule, TopicModule, UsersModule, ClassesModule, AcademicYearsModule, CapstonesModule, CouncilsModule, AuthModule, CapstonesRequestModule, CapstonesSubmissionModule, CouncilEvalutionModule, CouncilsMembersModule, MilestoneModule, ExpertisesModule, SemestersModule],
   controllers: [AppController],
   providers: [AppService],
 })

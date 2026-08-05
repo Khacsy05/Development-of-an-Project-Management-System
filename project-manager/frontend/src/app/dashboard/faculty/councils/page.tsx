@@ -30,7 +30,7 @@ const Page = () => {
 
     const fetchCouncils = async () => {
         try {
-            const response = await getCouncilList(faculty_id || undefined)
+            const response = await getCouncilList()
             setCouncils(response || [])
         } catch (error) {
             console.error(error)

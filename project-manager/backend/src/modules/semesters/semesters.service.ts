@@ -22,7 +22,7 @@ export class SemestersService {
     return `This action updates a #${id} semester`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} semester`;
+  async remove(id: number) {
+
   }
 }

@@ -4,17 +4,15 @@ import React, { useEffect, useState } from 'react';
 import { getTopicList, createTopic, updateTopic, deleteTopic } from '@/services/topic.service';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCacheStore } from '@/store/useCacheStore';
+import { useFacultyCacheStore } from '@/store/useFacultyCacheStore';
 import { toast } from 'sonner';
 import { Topic } from '@/type/topic';
-// Bộ nhớ cache theo trang và bộ lọc để lướt trang mượt mà (SWR Pattern)
-const pageCache = new Map<string, { topics: Topic[]; pagination: any }>();
 
 export default function FacultyTopicsPage() {
     const facultyId = useAuthStore((state) => state.faculty_id);
     const isInitializing = useAuthStore((state) => state.isInitializing);
     const { fetchExpertises } = useCacheStore();
-    // Caching state using Zustand
-    const { facultyTopics, setReports } = useCacheStore() as any; // Reusing cache or we can declare one. Let's use local state for now but support standard caching
+    const { topicsCache, setTopicsCache, clearTopicsCache } = useFacultyCacheStore();
 
     const [topics, setTopics] = useState<Topic[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -68,7 +66,7 @@ export default function FacultyTopicsPage() {
             });
             toast.success('Thêm đề tài mới thành công!');
             setIsCreateOpen(false);
-            pageCache.clear();
+            clearTopicsCache();
             fetchTopics(currentPage);
         } catch (error: any) {
             console.error('Lỗi khi thêm đề tài:', error);
@@ -89,7 +87,7 @@ export default function FacultyTopicsPage() {
             });
             toast.success('Cập nhật đề tài thành công!');
             setIsEditOpen(false);
-            pageCache.clear();
+            clearTopicsCache();
             fetchTopics(currentPage);
         } catch (error: any) {
             console.error('Lỗi khi cập nhật đề tài:', error);
@@ -103,7 +101,7 @@ export default function FacultyTopicsPage() {
             await deleteTopic(selectedTopic.topic_id);
             toast.success('Xóa đề tài thành công!');
             setIsDeleteOpen(false);
-            pageCache.clear();
+            clearTopicsCache();
             fetchTopics(currentPage);
         } catch (error: any) {
             console.error('Lỗi khi xóa đề tài:', error);
@@ -127,9 +125,9 @@ export default function FacultyTopicsPage() {
         // Tạo khóa định danh duy nhất cho trang và bộ lọc hiện tại
         const cacheKey = `${page}_${searchTitle.trim()}_${isAvailableFilter}`;
 
-        if (pageCache.has(cacheKey)) {
+        if (topicsCache.has(cacheKey)) {
             // Nếu đã từng tải trang này, hiển thị ngay lập tức (0ms)
-            const cached = pageCache.get(cacheKey)!;
+            const cached = topicsCache.get(cacheKey)!;
             setTopics(cached.topics);
             setCurrentPage(cached.pagination.page);
             setTotalPages(cached.pagination.totalPages);
@@ -167,7 +165,7 @@ export default function FacultyTopicsPage() {
                 setTotalItems(res.pagination.total);
 
                 // Lưu vào bộ nhớ đệm
-                pageCache.set(cacheKey, {
+                setTopicsCache(cacheKey, {
                     topics: topicsData,
                     pagination: res.pagination
                 });

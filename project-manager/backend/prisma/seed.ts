@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { CapstoneStatus, PrismaClient, UserRole } from '@prisma/client';
+import { CapstoneStatus, CouncilPosition, PrismaClient, UserRole } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import 'dotenv/config';
 
@@ -480,7 +480,7 @@ async function main() {
       create: {
         council_id: member.councilId,
         lecturer_id: member.lecturerId,
-        position: member.pos,
+        position: member.pos as CouncilPosition,
       }
     });
   }

@@ -86,6 +86,7 @@ export class CapstonesService {
             }
           },
           faculty: true,
+          council: true
         },
         orderBy: [
           {

@@ -9,6 +9,7 @@ interface CacheStore {
     reviews: any[] | null;
     cancels: any[] | null;
     expertises: any[] | null;
+    facultyStats: any | null;
 
     setStats: (stats: any) => void;
     setConfirmRequests: (requests: any[] | null) => void;
@@ -18,6 +19,7 @@ interface CacheStore {
     setCancels: (cancels: any[] | null) => void;
     fetchExpertises: () => Promise<any[]>;
     setExpertises: (expertises: any[] | null) => void;
+    setFacultyStats: (stats: any) => void;
     clearCache: () => void;
 }
 
@@ -29,6 +31,7 @@ export const useCacheStore = create<CacheStore>((set, get) => ({
     reviews: null,
     cancels: null,
     expertises: null,
+    facultyStats: null,
 
     setStats: (stats) => set({ stats }),
     setConfirmRequests: (confirmRequests) => set({ confirmRequests }),
@@ -37,6 +40,7 @@ export const useCacheStore = create<CacheStore>((set, get) => ({
     setReviews: (reviews) => set({ reviews }),
     setCancels: (cancels) => set({ cancels }),
     setExpertises: (expertises) => set({ expertises }),
+    setFacultyStats: (facultyStats) => set({ facultyStats }),
     fetchExpertises: async () => {
         const { expertises } = get();
         // 1. Nếu đã có dữ liệu trong cache toàn cục thì trả về ngay lập tức, không gọi API nữa
@@ -60,5 +64,6 @@ export const useCacheStore = create<CacheStore>((set, get) => ({
         reviews: null,
         cancels: null,
         expertises: null,
+        facultyStats: null,
     })
 }));

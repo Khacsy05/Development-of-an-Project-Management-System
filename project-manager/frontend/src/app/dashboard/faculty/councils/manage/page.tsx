@@ -1,24 +1,36 @@
 "use client"
 
 import React, { useEffect, useState } from 'react';
-import { getCouncilList, createCouncil, updateCouncil, deleteCouncil } from '@/services/council.service';
+import { getCouncilList, createCouncil, updateCouncil, deleteCouncil, assignCouncilMembers, getCounciMember } from '@/services/council.service';
 import { getSemesterList } from '@/services/semester.service';
+import { getLecturerList } from '@/services/lecturer.service';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useFacultyCacheStore } from '@/store/useFacultyCacheStore';
 import { toast } from 'sonner';
 
 export default function FacultyCouncilsManagePage() {
     const facultyId = useAuthStore((state) => state.faculty_id);
     const isInitializing = useAuthStore((state) => state.isInitializing);
+    const { councilsList, setCouncilsList } = useFacultyCacheStore();
 
     const [councils, setCouncils] = useState<any[]>([]);
     const [semesters, setSemesters] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(!councilsList);
 
     // Modal UI states
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [isAssignOpen, setIsAssignOpen] = useState(false);
     const [selectedCouncil, setSelectedCouncil] = useState<any | null>(null);
+
+    // Member Assignment states
+    const [lecturers, setLecturers] = useState<any[]>([]);
+    const [chairmanId, setChairmanId] = useState('');
+    const [secretaryId, setSecretaryId] = useState('');
+    const [member1Id, setMember1Id] = useState('');
+    const [member2Id, setMember2Id] = useState('');
+    const [member3Id, setMember3Id] = useState('');
 
     // Form states
     const [formName, setFormName] = useState('');
@@ -30,10 +42,17 @@ export default function FacultyCouncilsManagePage() {
 
     const fetchCouncils = async () => {
         if (!facultyId) return;
-        setIsLoading(true);
+        if (councilsList) {
+            setCouncils(councilsList);
+            setIsLoading(false);
+        } else {
+            setIsLoading(true);
+        }
         try {
             const data = await getCouncilList();
-            setCouncils(Array.isArray(data) ? data : (data?.data || []));
+            const list = Array.isArray(data) ? data : (data?.data || []);
+            setCouncils(list);
+            setCouncilsList(list);
         } catch (error: any) {
             console.error('Lỗi khi tải danh sách hội đồng:', error);
             toast.error('Không thể tải danh sách hội đồng.');
@@ -51,10 +70,20 @@ export default function FacultyCouncilsManagePage() {
         }
     };
 
+    const fetchLecturers = async () => {
+        try {
+            const data = await getLecturerList({ limit: 100 });
+            setLecturers(Array.isArray(data) ? data : (data?.data || []));
+        } catch (error) {
+            console.error('Lỗi khi tải danh sách giảng viên:', error);
+        }
+    };
+
     useEffect(() => {
         if (!isInitializing && facultyId) {
             fetchCouncils();
             fetchSemesters();
+            fetchLecturers();
         }
     }, [facultyId, isInitializing]);
 
@@ -117,6 +146,7 @@ export default function FacultyCouncilsManagePage() {
             });
             toast.success('Thêm hội đồng mới thành công!');
             setIsCreateOpen(false);
+            setCouncilsList(null);
             fetchCouncils();
         } catch (error: any) {
             console.error('Lỗi khi tạo hội đồng:', error);
@@ -138,6 +168,7 @@ export default function FacultyCouncilsManagePage() {
             });
             toast.success('Cập nhật hội đồng thành công!');
             setIsEditOpen(false);
+            setCouncilsList(null);
             fetchCouncils();
         } catch (error: any) {
             console.error('Lỗi khi cập nhật hội đồng:', error);
@@ -151,10 +182,76 @@ export default function FacultyCouncilsManagePage() {
             await deleteCouncil(selectedCouncil.council_id);
             toast.success('Xóa hội đồng thành công!');
             setIsDeleteOpen(false);
+            setCouncilsList(null);
             fetchCouncils();
         } catch (error: any) {
             console.error('Lỗi khi xóa hội đồng:', error);
             toast.error(typeof error === 'string' ? error : 'Không thể xóa hội đồng.');
+        }
+    };
+
+    const handleOpenAssign = (council: any) => {
+        setSelectedCouncil(council);
+
+        // Reset selections
+        setChairmanId('');
+        setSecretaryId('');
+        setMember1Id('');
+        setMember2Id('');
+        setMember3Id('');
+
+        // Find existing members
+        if (Array.isArray(council.members)) {
+            const chairman = council.members.find((m: any) => m.position === 'CHAIRMAN');
+            const secretary = council.members.find((m: any) => m.position === 'SECRETARY');
+            const members = council.members.filter((m: any) => m.position === 'REVIEWER');
+
+            if (chairman) setChairmanId(String(chairman.lecturer_id));
+            if (secretary) setSecretaryId(String(secretary.lecturer_id));
+            if (members[0]) setMember1Id(String(members[0].lecturer_id));
+            if (members[1]) setMember2Id(String(members[1].lecturer_id));
+            if (members[2]) setMember3Id(String(members[2].lecturer_id));
+        }
+
+        setIsAssignOpen(true);
+    };
+
+    const handleAssignSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            if (!selectedCouncil) return;
+
+            const payload: any[] = [];
+            if (chairmanId) payload.push({ lecturer_id: chairmanId, position: 'CHAIRMAN' });
+            if (secretaryId) payload.push({ lecturer_id: secretaryId, position: 'SECRETARY' });
+            if (member1Id) payload.push({ lecturer_id: member1Id, position: 'REVIEWER' });
+            if (member2Id) payload.push({ lecturer_id: member2Id, position: 'REVIEWER' });
+            if (member3Id) payload.push({ lecturer_id: member3Id, position: 'REVIEWER' });
+
+            if (payload.length === 0) {
+                toast.error('Vui lòng chọn ít nhất một thành viên!WSL: Connect to WSL');
+                return;
+            }
+
+            // Check for duplicate lecturers
+            const lecturerIds = payload.map(p => p.lecturer_id);
+            const hasDuplicates = new Set(lecturerIds).size !== lecturerIds.length;
+            if (hasDuplicates) {
+                toast.error('Một giảng viên không thể đảm nhiệm nhiều vị trí trong cùng một hội đồng!');
+                return;
+            }
+
+            await assignCouncilMembers({
+                council_id: selectedCouncil.council_id,
+                members: payload
+            });
+            toast.success('Phân công thành viên hội đồng thành công!');
+            setIsAssignOpen(false);
+            setCouncilsList(null);
+            fetchCouncils();
+        } catch (error: any) {
+            console.error('Lỗi khi phân công thành viên:', error);
+            toast.error(typeof error === 'string' ? error : 'Không thể phân công thành viên.');
         }
     };
 
@@ -215,7 +312,7 @@ export default function FacultyCouncilsManagePage() {
                                             {council.name}
                                         </td>
                                         <td className="px-4 py-4 text-gray-600">
-                                            {council.semester?.name || `Học kỳ ${council.semester_id}`}
+                                            {council.semester?.semester_name}
                                         </td>
                                         <td className="px-4 py-4 text-gray-600 font-medium">
                                             Phòng {council.rooms} - Nhà {council.buildings}
@@ -235,6 +332,16 @@ export default function FacultyCouncilsManagePage() {
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                     </svg>
                                                     Sửa
+                                                </button>
+                                                <button
+                                                    onClick={() => handleOpenAssign(council)}
+                                                    className="inline-flex items-center justify-center h-6 px-2 rounded-md text-[10px] font-semibold border border-green-100 bg-green-50 text-green-700 hover:border-green-200 hover:bg-green-100 transition-all"
+                                                    title="Phân công thành viên"
+                                                >
+                                                    <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                                    </svg>
+                                                    Thành viên
                                                 </button>
 
                                                 <button
@@ -293,7 +400,7 @@ export default function FacultyCouncilsManagePage() {
                                         <option value="">-- Chọn học kỳ --</option>
                                         {semesters.map((sem) => (
                                             <option key={String(sem.semester_id)} value={String(sem.semester_id)}>
-                                                {sem.name}
+                                                {sem.semester_name}
                                             </option>
                                         ))}
                                     </select>
@@ -393,7 +500,7 @@ export default function FacultyCouncilsManagePage() {
                                         <option value="">-- Chọn học kỳ --</option>
                                         {semesters.map((sem) => (
                                             <option key={String(sem.semester_id)} value={String(sem.semester_id)}>
-                                                {sem.name}
+                                                {sem.semester_name}
                                             </option>
                                         ))}
                                     </select>
@@ -481,6 +588,119 @@ export default function FacultyCouncilsManagePage() {
                                 Xác nhận giải tán
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL: PHÂN CÔNG THÀNH VIÊN HỘI ĐỒNG */}
+            {isAssignOpen && selectedCouncil && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl border border-gray-100 flex flex-col gap-4 mx-4">
+                        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-900">Phân công thành viên Hội đồng</h3>
+                                <p className="text-[10px] text-gray-400 mt-0.5">{selectedCouncil.name}</p>
+                            </div>
+                            <button onClick={() => setIsAssignOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <form onSubmit={handleAssignSubmit} className="flex flex-col gap-3.5 text-xs text-gray-700">
+                            <div>
+                                <label className="block font-bold mb-1">Chủ tịch Hội đồng <span className="text-red-500">*</span></label>
+                                <select
+                                    required
+                                    value={chairmanId}
+                                    onChange={(e) => setChairmanId(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3b4c80]/20 bg-white"
+                                >
+                                    <option value="">-- Chọn giảng viên làm Chủ tịch --</option>
+                                    {lecturers.map((lec) => (
+                                        <option key={String(lec.user_id)} value={String(lec.user_id)}>
+                                            {lec.fullname} ({lec.email})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block font-bold mb-1">Thư ký Hội đồng <span className="text-red-500">*</span></label>
+                                <select
+                                    required
+                                    value={secretaryId}
+                                    onChange={(e) => setSecretaryId(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3b4c80]/20 bg-white"
+                                >
+                                    <option value="">-- Chọn giảng viên làm Thư ký --</option>
+                                    {lecturers.map((lec) => (
+                                        <option key={String(lec.user_id)} value={String(lec.user_id)}>
+                                            {lec.fullname} ({lec.email})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block font-bold mb-1">Ủy viên phản biện <span className="text-red-500">*</span></label>
+                                <select
+                                    required
+                                    value={member1Id}
+                                    onChange={(e) => setMember1Id(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3b4c80]/20 bg-white"
+                                >
+                                    <option value="">-- Chọn giảng viên làm Ủy viên phản biện --</option>
+                                    {lecturers.map((lec) => (
+                                        <option key={String(lec.user_id)} value={String(lec.user_id)}>
+                                            {lec.fullname} ({lec.email})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block font-bold mb-1">Ủy viên 2 (Tùy chọn)</label>
+                                    <select
+                                        value={member2Id}
+                                        onChange={(e) => setMember2Id(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3b4c80]/20 bg-white"
+                                    >
+                                        <option value="">-- Trống --</option>
+                                        {lecturers.map((lec) => (
+                                            <option key={String(lec.user_id)} value={String(lec.user_id)}>
+                                                {lec.fullname}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block font-bold mb-1">Ủy viên 3 (Tùy chọn)</label>
+                                    <select
+                                        value={member3Id}
+                                        onChange={(e) => setMember3Id(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3b4c80]/20 bg-white"
+                                    >
+                                        <option value="">-- Trống --</option>
+                                        {lecturers.map((lec) => (
+                                            <option key={String(lec.user_id)} value={String(lec.user_id)}>
+                                                {lec.fullname}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-2 border-t border-gray-100 pt-4 mt-2">
+                                <button type="button" onClick={() => setIsAssignOpen(false)} className="px-4 py-2 border border-gray-200 hover:bg-gray-50 rounded-xl font-bold transition-all text-gray-600">
+                                    Hủy
+                                </button>
+                                <button type="submit" className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-all shadow-sm">
+                                    Lưu phân công
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

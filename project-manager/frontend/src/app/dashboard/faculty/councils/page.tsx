@@ -1,6 +1,8 @@
 "use client"
+
 import { useAuthStore } from '@/store/useAuthStore'
 import { assignCouncil, getCapstoneLists } from '@/services/capstone.service';
+import { useFacultyCacheStore } from '@/store/useFacultyCacheStore';
 import React, { useEffect, useState } from 'react'
 import { getCouncilList } from '@/services/council.service';
 import { CapstoneStatus } from '@/type/capstone';
@@ -9,17 +11,26 @@ import { toast } from 'sonner';
 const Page = () => {
     const faculty_id = useAuthStore((state) => state.faculty_id)
     const isInitializing = useAuthStore((state) => state.isInitializing)
+    const { councilsList, setCouncilsList, councilsAssignList, setCouncilsAssignList } = useFacultyCacheStore();
+
     const [capstones, setCapstones] = useState<any[]>([])
     const [councils, setCouncils] = useState<any[]>([])
     const [selectedCapstone, setSelectedCapstone] = useState<any | null>(null)
-    const [isLoading, setIsLoading] = useState(true)
+    const [isLoading, setIsLoading] = useState(!councilsAssignList || !councilsList)
 
     const fetchCapstones = async () => {
         if (!faculty_id) return
-        setIsLoading(true)
+        if (councilsAssignList) {
+            setCapstones(councilsAssignList);
+            setIsLoading(false);
+        } else {
+            setIsLoading(true);
+        }
         try {
             const res = await getCapstoneLists({ faculty_id, status: CapstoneStatus.DEFENSE_ELIGIBLE })
-            setCapstones(res.data || [])
+            const list = res.data || [];
+            setCapstones(list)
+            setCouncilsAssignList(list);
         } catch (error) {
             console.error(error)
             toast.error('Không thể tải danh sách đồ án.')
@@ -29,9 +40,15 @@ const Page = () => {
     }
 
     const fetchCouncils = async () => {
+        if (councilsList) {
+            setCouncils(councilsList);
+            return;
+        }
         try {
             const response = await getCouncilList()
-            setCouncils(response || [])
+            const list = response || [];
+            setCouncils(list)
+            setCouncilsList(list);
         } catch (error) {
             console.error(error)
             toast.error('Không thể tải danh sách hội đồng.')
@@ -54,6 +71,7 @@ const Page = () => {
             await assignCouncil(capstoneId, councilId)
             toast.success('Phân công hội đồng bảo vệ thành công!')
             setSelectedCapstone(null)
+            setCouncilsAssignList(null);
             fetchCapstones()
         } catch (error: any) {
             const backendMessage = error.response?.data?.message || 'Có lỗi xảy ra khi phân công hội đồng';

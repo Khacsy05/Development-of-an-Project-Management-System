@@ -1,11 +1,7 @@
 import { Type } from "class-transformer";
 import { ArrayNotEmpty, IsArray, IsEnum, IsNotEmpty, IsString, ValidateNested } from "class-validator";
+import { CouncilPosition } from "@prisma/client";
 
-export enum CouncilPosition {
-    CHAIRMAN = 'CHAIRMAN',   // Chủ tịch
-    SECRETARY = 'SECRETARY', // Thư ký
-    MEMBER = 'MEMBER',       // Ủy viên
-}
 
 export class CouncilMemberItemDto {
     @IsNotEmpty()

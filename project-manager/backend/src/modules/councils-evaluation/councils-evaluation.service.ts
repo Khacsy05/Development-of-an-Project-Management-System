@@ -36,7 +36,8 @@ export class CouncilEvalutionService {
           capstone: {
             include: {
               topic: true,
-              student: true
+              student: true,
+              council: true
             }
           },
           council: {

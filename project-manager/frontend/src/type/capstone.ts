@@ -75,6 +75,8 @@ export interface Capstone {
         fullname: string;
       } | null;
     }> | null;
+    end_date?: string;
+    start_date?: string;
   } | null;
   instructor_grade?: number | null;
   council_grade?: number | null;

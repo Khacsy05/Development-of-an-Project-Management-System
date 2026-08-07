@@ -11,19 +11,42 @@ export class MilestoneService {
     return 'This action adds a new milestone';
   }
 
-  findAll() {
-    return this.prisma.milestone.findMany();
+  findAll(semester_id?: string) {
+    const where: any = {};
+    if (semester_id) {
+      where.semester_id = BigInt(semester_id);
+    }
+    return this.prisma.milestone.findMany({
+      where,
+      orderBy: {
+        milestone_id: 'asc'
+      }
+    });
   }
 
   findOne(id: number) {
-    return `This action returns a #${id} milestone`;
+    return this.prisma.milestone.findUnique({
+      where: { milestone_id: BigInt(id) }
+    });
   }
 
-  update(id: number, updateMilestoneDto: UpdateMilestoneDto) {
-    return `This action updates a #${id} milestone`;
+  async update(id: number, updateMilestoneDto: UpdateMilestoneDto) {
+    const { phase_name, description, deadline } = updateMilestoneDto as any;
+    const parsedDeadline = deadline ? new Date(deadline.replace(' ', 'T')) : undefined;
+
+    return await this.prisma.milestone.update({
+      where: { milestone_id: BigInt(id) },
+      data: {
+        phase_name,
+        description,
+        deadline: parsedDeadline
+      }
+    });
   }
 
   remove(id: number) {
-    return `This action removes a #${id} milestone`;
+    return this.prisma.milestone.delete({
+      where: { milestone_id: BigInt(id) }
+    });
   }
 }

@@ -1,12 +1,10 @@
 import apiClient from "@/lib/apiClient";
-import { GetCouncilEvaluationsQueryDto } from "@/type/council";
+import { assignCouncilMembersDto, GetCouncilEvaluationsQueryDto, GetCouncilMembersQueryDto } from "@/type/council";
 
-export async function getCounciMember(lecturer_id?: string) {
+export async function getCounciMember(data: GetCouncilMembersQueryDto) {
     try {
         const response = await apiClient.get('/councils-members', {
-            params: {
-                lecturer_id
-            }
+            params: data
         });
         console.log('Danh sách thành viên hội đồng:', response.data);
         return response.data;
@@ -77,5 +75,15 @@ export async function deleteCouncil(id: string | number) {
     } catch (error: any) {
         console.error('Lỗi khi xóa hội đồng:', error);
         throw error.response?.data?.message || 'Lỗi khi xóa hội đồng';
+    }
+}
+
+export async function assignCouncilMembers(data: assignCouncilMembersDto) {
+    try {
+        const response = await apiClient.post('/councils-members', data);
+        return response.data;
+    } catch (error: any) {
+        console.error('Lỗi khi phân công thành viên hội đồng:', error);
+        throw error.response?.data?.message || 'Lỗi khi phân công thành viên hội đồng';
     }
 }

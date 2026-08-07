@@ -6,9 +6,11 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 interface SidebarProps {
   onLogout: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export default function Sidebar({ onLogout }: SidebarProps) {
+export default function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { role, isDean, sidebarMode, setSidebarMode } = useAuthStore();
@@ -178,6 +180,15 @@ export default function Sidebar({ onLogout }: SidebarProps) {
             </svg>
           )
         },
+        {
+          name: 'Quản lý mốc thời gian', path: `${rolePrefix}/milestones`, icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )
+        },
+
+
       ]
     }
   ];
@@ -211,80 +222,110 @@ export default function Sidebar({ onLogout }: SidebarProps) {
   }
 
   return (
-    <aside className="w-72 bg-white border-r border-gray-200 flex flex-col py-6 select-none shrink-0 shadow-sm">
-      <div className="flex flex-col gap-6 px-4 flex-1">
-        {currentMenu.map((group, groupIdx) => (
-          <div key={groupIdx} className="flex flex-col gap-1.5">
-            {group.title && (
-              <h3 className="px-3 text-[11px] font-bold text-[#8d9299] tracking-wider uppercase mb-1">
-                {group.title}
-              </h3>
-            )}
-            {group.items.map((item, itemIdx) => {
-              const isActive = pathname === item.path;
-              return (
-                <button
-                  key={itemIdx}
-                  onClick={() => router.push(item.path)}
-                  className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${isActive
-                    ? 'bg-blue-50 text-[#3b4c80] shadow-sm border-l-4 border-[#3b4c80] font-bold'
-                    : 'text-[#6f7482] hover:bg-gray-50 hover:text-gray-900'
-                    }`}
-                >
-                  <span className={isActive ? 'text-[#3b4c80]' : 'text-gray-400'}>
-                    {item.icon}
-                  </span>
-                  {item.name}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-
-      {/* Nút chuyển đổi vai trò (Chỉ hiển thị cho Trưởng khoa) */}
-      {role === 'Lecturer' && isDean && (
-        <div className="px-4 mb-2">
-          <button
-            onClick={() => {
-              const targetMode = sidebarMode === 'lecturer' ? 'dean' : 'lecturer';
-              setSidebarMode(targetMode);
-              const targetPrefix = targetMode === 'dean' ? '/dashboard/faculty' : '/dashboard/lecturer';
-              router.push(targetPrefix);
-            }}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold bg-[#3b4c80] hover:bg-[#2d3a63] text-white shadow-md transition-all duration-200"
-          >
-            {sidebarMode === 'lecturer' ? (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                Quản lý Khoa
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-                Vai trò Giảng viên
-              </>
-            )}
-          </button>
-        </div>
+    <>
+      {/* Backdrop for mobile devices */}
+      {isOpen && (
+        <div
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden transition-opacity duration-300"
+        />
       )}
 
-      {/* Nút Đăng xuất ở chân Sidebar */}
-      <div className="px-4 mt-auto pt-6 border-t border-gray-100">
-        <button
-          onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 transition-all duration-200"
-        >
-          <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          Đăng xuất hệ thống
-        </button>
-      </div>
-    </aside>
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200 flex flex-col py-6 select-none shrink-0 shadow-xl lg:shadow-sm transition-transform duration-300 transform lg:static lg:translate-x-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Mobile close button */}
+        <div className="flex justify-end px-4 mb-2 lg:hidden">
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-gray-50 rounded-xl text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-6 px-4 flex-1">
+          {currentMenu.map((group, groupIdx) => (
+            <div key={groupIdx} className="flex flex-col gap-1.5">
+              {group.title && (
+                <h3 className="px-3 text-[11px] font-bold text-[#8d9299] tracking-wider uppercase mb-1">
+                  {group.title}
+                </h3>
+              )}
+              {group.items.map((item, itemIdx) => {
+                const isActive = pathname === item.path;
+                return (
+                  <button
+                    key={itemIdx}
+                    onClick={() => {
+                      router.push(item.path);
+                      if (onClose) onClose();
+                    }}
+                    className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${isActive
+                      ? 'bg-blue-50 text-[#3b4c80] shadow-sm border-l-4 border-[#3b4c80] font-bold'
+                      : 'text-[#6f7482] hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                  >
+                    <span className={isActive ? 'text-[#3b4c80]' : 'text-gray-400'}>
+                      {item.icon}
+                    </span>
+                    {item.name}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Nút chuyển đổi vai trò (Chỉ hiển thị cho Trưởng khoa) */}
+        {role === 'Lecturer' && isDean && (
+          <div className="px-4 mb-2">
+            <button
+              onClick={() => {
+                const targetMode = sidebarMode === 'lecturer' ? 'dean' : 'lecturer';
+                setSidebarMode(targetMode);
+                const targetPrefix = targetMode === 'dean' ? '/dashboard/faculty' : '/dashboard/lecturer';
+                router.push(targetPrefix);
+                if (onClose) onClose();
+              }}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold bg-[#3b4c80] hover:bg-[#2d3a63] text-white shadow-md transition-all duration-200"
+            >
+              {sidebarMode === 'lecturer' ? (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  Quản lý Khoa
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  Vai trò Giảng viên
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Nút Đăng xuất ở chân Sidebar */}
+        <div className="px-4 mt-auto pt-6 border-t border-gray-100">
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 transition-all duration-200"
+          >
+            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Đăng xuất hệ thống
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }

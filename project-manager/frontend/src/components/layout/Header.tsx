@@ -5,16 +5,27 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 interface HeaderProps {
   onLogout: () => void;
+  onMenuClick?: () => void;
 }
 
-export default function Header({ onLogout }: HeaderProps) {
+export default function Header({ onLogout, onMenuClick }: HeaderProps) {
   const { role, userName } = useAuthStore();
 
   return (
     <header className="bg-[#3b4c80] text-white flex items-center justify-between px-6 py-3 shadow-md border-b border-[#2d3a63]">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
+        {/* Hamburger Menu Button for Mobile */}
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden p-1.5 hover:bg-white/10 rounded-xl transition-all mr-1"
+        >
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
         {/* Logo Trường */}
-        <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-1.5 shadow-inner">
+        <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-1.5 shadow-inner hidden sm:flex">
 
         </div>
         <div>

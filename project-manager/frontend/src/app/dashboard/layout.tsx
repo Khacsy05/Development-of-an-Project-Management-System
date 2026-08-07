@@ -9,18 +9,22 @@ import Footer from '@/components/layout/Footer';
 import apiClient from '@/lib/apiClient';
 
 import { useCacheStore } from '@/store/useCacheStore';
+import { useFacultyCacheStore } from '@/store/useFacultyCacheStore';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { logout } = useAuthStore();
   const { clearCache } = useCacheStore();
+  const { clearFacultyCache } = useFacultyCacheStore();
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
   const handleLogout = async () => {
     // 1. Hiển thị Loading Toast lập tức để phản hồi người dùng
-    const toastId = toast.loading('Đang đăng xuất khỏi hệ thống...');
+    const toastId = toast.loading('Đang đăng xuất...');
 
     // 2. Xóa trạng thái đăng nhập ở RAM ngay để giao diện đổi sang trạng thái Loading
     logout();
     clearCache();
+    clearFacultyCache();
 
     try {
       // 3. Gọi API xóa HttpOnly Cookie phía Backend
@@ -35,18 +39,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 text-gray-800 overflow-hidden">
+    <div className="flex flex-col h-screen bg-gray-50 text-gray-800 overflow-hidden relative">
       <Toaster richColors position="top-right" />
 
       {/* 1. HEADER COMPONENT */}
-      <Header onLogout={handleLogout} />
+      <Header onLogout={handleLogout} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* 2. SIDEBAR COMPONENT */}
-        <Sidebar onLogout={handleLogout} />
+        <Sidebar
+          onLogout={handleLogout}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+        />
 
         {/* 3. MAIN CONTENT AREA */}
-        <main className="flex-1 p-8 overflow-y-auto bg-gray-50">
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-gray-50">
           {children}
         </main>
       </div>

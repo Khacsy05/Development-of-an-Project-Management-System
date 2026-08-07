@@ -130,6 +130,7 @@ const Page = () => {
                                     <th className="px-4 py-3.5 w-[18%]">Sinh viên</th>
                                     <th className="px-4 py-3.5 w-[18%]">Hội đồng bảo vệ</th>
                                     <th className="px-4 py-3.5 w-[10%] text-center">Điểm số</th>
+                                    <th className="px-4 py-3.5 w-[10%] text-center">Hạn nộp</th>
                                     <th className="px-4 py-3.5 w-[16%]">Ghi chú phản biện</th>
                                 </tr>
                             </thead>
@@ -181,6 +182,15 @@ const Page = () => {
                                                     </span>
                                                 )}
                                             </td>
+
+                                            <td className="px-4 py-3 text-center align-middle">
+                                                <span className="inline-flex items-center justify-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                                    {item.capstone?.council?.end_date
+                                                        ? new Date(item.capstone.council.end_date).toLocaleDateString('vi-VN')
+                                                        : '--/--/----'}
+                                                </span>
+                                            </td>
+
 
                                             {/* Column 5: Note & Actions */}
                                             <td className="px-4 py-3">

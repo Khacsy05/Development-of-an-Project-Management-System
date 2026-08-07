@@ -50,7 +50,8 @@ export class CouncilsService {
           include: {
             lecturer: true
           }
-        }
+        },
+        semester: true
       }
     })
   }
@@ -59,11 +60,58 @@ export class CouncilsService {
     return `This action returns a #${id} council`;
   }
 
-  update(id: number, updateCouncilDto: UpdateCouncilDto) {
-    return `This action updates a #${id} council`;
+  async update(id: number, updateCouncilDto: UpdateCouncilDto) {
+    const { semester_id, rooms, buildings, name, start_date, end_date } = updateCouncilDto
+    const formattedStartDate = new Date(start_date!.replace(' ', 'T'));
+    const formattedEndDate = new Date(end_date!.replace(' ', 'T'));
+    const currentSemester = await this.prisma.semester.findUnique({
+      where: {
+        semester_id: BigInt(semester_id!),
+        start_date: { lte: new Date() },
+        end_date: { gte: new Date() }
+      }
+    });
+
+    if (!currentSemester) {
+      throw new BadRequestException("Hiện tại không nằm trong thời gian của học kỳ được cấu hình!");
+    }
+    return await this.prisma.council.update({
+      where: {
+        council_id: BigInt(id)
+      },
+      data: {
+        buildings: buildings,
+        name: name,
+        rooms: rooms,
+        semester_id: BigInt(semester_id!),
+        start_date: formattedStartDate,
+        end_date: formattedEndDate
+      }
+    })
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} council`;
+  async remove(id: number) {
+
+    const council = await this.prisma.council.findUnique({
+      where: {
+        council_id: BigInt(id)
+      },
+      include: {
+        capstones: true,
+        members: true,
+        council_evalution: true
+      }
+    })
+    if (!council) {
+      throw new BadRequestException("Hội đồng không tồn tại!");
+    }
+    if (council.capstones.length > 0 || council.members.length > 0 || council.council_evalution.length > 0) {
+      throw new BadRequestException("Hội đồng đã được sử dụng, không thể xóa!");
+    }
+    return await this.prisma.council.delete({
+      where: {
+        council_id: BigInt(id)
+      }
+    })
   }
 }

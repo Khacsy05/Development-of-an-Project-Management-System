@@ -113,7 +113,25 @@ export default function FacultyTopicsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
-    const limit = 3;
+    const limit = 6;
+
+    const getPaginationRange = (current: number, total: number) => {
+        const delta = 1; // Show 1 page on left & right of current page
+        const range: (number | string)[] = [];
+
+        for (let i = 1; i <= total; i++) {
+            if (
+                i === 1 ||
+                i === total ||
+                (i >= current - delta && i <= current + delta)
+            ) {
+                range.push(i);
+            } else if (range[range.length - 1] !== '...') {
+                range.push('...');
+            }
+        }
+        return range;
+    };
 
     // Filter states
     const [searchTitle, setSearchTitle] = useState('');
@@ -419,18 +437,31 @@ export default function FacultyTopicsPage() {
                                             </svg>
                                         </button>
 
-                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                            <button
-                                                key={page}
-                                                onClick={() => setCurrentPage(page)}
-                                                className={`relative inline-flex items-center px-3 py-1.5 text-xs font-semibold focus:z-20 ${currentPage === page
-                                                    ? 'z-10 bg-[#3b4c80] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
-                                                    : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0'
-                                                    }`}
-                                            >
-                                                {page}
-                                            </button>
-                                        ))}
+                                        {getPaginationRange(currentPage, totalPages).map((page, idx) => {
+                                            if (page === '...') {
+                                                return (
+                                                    <span
+                                                        key={`ellipsis-${idx}`}
+                                                        className="relative inline-flex items-center px-3 py-1.5 text-xs font-semibold text-gray-400 ring-1 ring-inset ring-gray-300 bg-white"
+                                                    >
+                                                        ...
+                                                    </span>
+                                                );
+                                            }
+                                            const pageNum = Number(page);
+                                            return (
+                                                <button
+                                                    key={pageNum}
+                                                    onClick={() => setCurrentPage(pageNum)}
+                                                    className={`relative inline-flex items-center px-3 py-1.5 text-xs font-semibold focus:z-20 ${currentPage === pageNum
+                                                        ? 'z-10 bg-[#3b4c80] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
+                                                        : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0'
+                                                        }`}
+                                                >
+                                                    {pageNum}
+                                                </button>
+                                            );
+                                        })}
 
                                         <button
                                             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}

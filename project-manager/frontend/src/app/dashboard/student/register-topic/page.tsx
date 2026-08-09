@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { updatedCapstone, uploadFile } from '@/services/capstone.service';
-import { getTopicList } from '@/services/topic.service';
+import { getTopicList, getTopicById } from '@/services/topic.service';
 import { useCapstoneStore } from '@/store/useCapstoneStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from 'sonner';
@@ -21,13 +21,48 @@ export default function RegisterTopicPage() {
     const [message, setMessage] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-    const fetchData = async () => {
-        if (!userId) return;
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const limit = 6;
+
+    const getPaginationRange = (current: number, total: number) => {
+        const delta = 1;
+        const range: (number | string)[] = [];
+
+        for (let i = 1; i <= total; i++) {
+            if (
+                i === 1 ||
+                i === total ||
+                (i >= current - delta && i <= current + delta)
+            ) {
+                range.push(i);
+            } else if (range[range.length - 1] !== '...') {
+                range.push('...');
+            }
+        }
+        return range;
+    };
+
+    const fetchTopicsData = async (page: number) => {
         try {
             setIsLoading(true);
-            await fetchCapstone(userId);
-            const topicsData = await getTopicList({ isAvailable: 'true' });
+            const params: any = {
+                isAvailable: 'true',
+                page,
+                limit,
+            };
+            if (searchQuery.trim()) {
+                params.title = searchQuery.trim();
+            }
+            const topicsData = await getTopicList(params);
             setTopics(topicsData.data || []);
+            if (topicsData.pagination) {
+                setCurrentPage(topicsData.pagination.page);
+                setTotalPages(topicsData.pagination.totalPages);
+                setTotalItems(topicsData.pagination.total);
+            }
         } catch (error) {
             console.error('Lỗi khi tải dữ liệu đề tài:', error);
             toast.error('Không thể tải danh sách đề tài');
@@ -36,9 +71,17 @@ export default function RegisterTopicPage() {
         }
     };
 
+    // Load capstone initially
     useEffect(() => {
-        fetchData();
+        if (userId) {
+            fetchCapstone(userId);
+        }
     }, [userId]);
+
+    // Load topics when page or query changes
+    useEffect(() => {
+        fetchTopicsData(currentPage);
+    }, [currentPage, searchQuery, userId]);
 
     const handleRegister = async (topicId: string, msg: string, file: File | null) => {
         if (!capstone?.capstone_id) {
@@ -65,6 +108,7 @@ export default function RegisterTopicPage() {
             setCapstone(res);
             setActiveRegisterTopic(null);
             setSelectedFile(null);
+            fetchTopicsData(currentPage);
         } catch (error: any) {
             console.error('Lỗi đăng ký đề tài:', error);
             toast.error(error.message || 'Đăng ký đề tài thất bại');
@@ -78,25 +122,65 @@ export default function RegisterTopicPage() {
         (r: any) => r.request_type === 'REGISTER_TOPIC' && r.status === 'PENDING'
     );
     const hasConfirmedTopic = capstone?.topic_id !== null && capstone?.topic_id !== undefined;
-    const hasAnyActiveTopicState = hasConfirmedTopic || !!pendingTopicRequest;
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-            </div>
-        );
+    const [pendingTopic, setPendingTopic] = useState<Topic | null>(null);
+
+    useEffect(() => {
+        const fetchPendingTopic = async () => {
+            if (pendingTopicRequest?.target_id) {
+                try {
+                    const data = await getTopicById(pendingTopicRequest.target_id);
+                    setPendingTopic(data);
+                } catch (e) {
+                    console.error(e);
+                }
+            } else {
+                setPendingTopic(null);
+            }
+        };
+        fetchPendingTopic();
+    }, [pendingTopicRequest?.target_id]);
+
+    let displayTopics = [...topics];
+
+    if (currentPage === 1) {
+        if (hasConfirmedTopic && capstone?.topic) {
+            const exists = topics.some((t) => String(t.topic_id) === String(capstone.topic_id));
+            if (!exists) {
+                displayTopics.unshift(capstone.topic);
+            }
+        }
+        if (pendingTopicRequest && pendingTopic) {
+            const exists = topics.some((t) => String(t.topic_id) === String(pendingTopic.topic_id));
+            if (!exists) {
+                displayTopics.unshift(pendingTopic);
+            }
+        }
+
+        displayTopics.sort((a, b) => {
+            const aSelected = hasConfirmedTopic && String(capstone?.topic_id) === String(a.topic_id);
+            const bSelected = hasConfirmedTopic && String(capstone?.topic_id) === String(b.topic_id);
+            const aPending = pendingTopicRequest && String(pendingTopicRequest.target_id) === String(a.topic_id);
+            const bPending = pendingTopicRequest && String(pendingTopicRequest.target_id) === String(b.topic_id);
+
+            if (aSelected && !bSelected) return -1;
+            if (!aSelected && bSelected) return 1;
+            if (aPending && !bPending) return -1;
+            if (!aPending && bPending) return 1;
+            return 0;
+        });
+    } else {
+        if (hasConfirmedTopic) {
+            displayTopics = displayTopics.filter((t) => String(t.topic_id) !== String(capstone.topic_id));
+        }
+        if (pendingTopicRequest) {
+            displayTopics = displayTopics.filter((t) => String(t.topic_id) !== String(pendingTopicRequest.target_id));
+        }
     }
 
-    // Lọc đề tài theo ô tìm kiếm
-    const filteredTopics = topics.filter((t) =>
-        t.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
     return (
-        <div className="flex flex-col lg:flex-row gap-8 max-w-6xl mx-auto p-4 animate-fadeIn">
-
-            {/* CỘT TRÁI: DANH SÁCH ĐỀ TÀI ĐỂ ĐĂNG KÝ */}
+        <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto p-4 animate-fadeIn">
+            {/* CỘT TRÁI: DANH SÁCH ĐỀ TÀI ĐỂ ĐĂNG KÝ (DẠNG BẢNG & PHÂN TRANG) */}
             <div className="flex-1 flex flex-col gap-6">
                 <div className="border-b border-gray-100 pb-4">
                     <h1 className="text-2xl font-black text-gray-800 tracking-tight uppercase">
@@ -113,7 +197,10 @@ export default function RegisterTopicPage() {
                         type="text"
                         placeholder="Tìm kiếm đề tài theo tên..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setCurrentPage(1); // Reset về trang 1 khi tìm kiếm
+                        }}
                         className="w-full px-5 py-3 border border-gray-200 rounded-2xl shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white placeholder-gray-400 font-medium"
                     />
                     <div className="absolute right-4 top-3.5 text-gray-400">
@@ -123,82 +210,194 @@ export default function RegisterTopicPage() {
                     </div>
                 </div>
 
-                {/* Danh sách đề tài */}
-                <div className="flex flex-col gap-4">
-                    {filteredTopics.length === 0 ? (
-                        <div className="text-center py-12 text-gray-400 font-medium bg-white rounded-[24px] border border-gray-100 shadow-sm">
-                            Không tìm thấy đề tài nào khả dụng.
-                        </div>
-                    ) : (
-                        filteredTopics.map((topic) => {
-                            const isSelected = hasConfirmedTopic && String(capstone?.topic_id) === String(topic.topic_id);
-                            const isPending = pendingTopicRequest && String(pendingTopicRequest.target_id) === String(topic.topic_id);
+                {/* Dạng Bảng Đề Tài */}
+                {isLoading ? (
+                    <div className="flex items-center justify-center min-h-[300px]">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                    </div>
+                ) : (
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse text-left">
+                                <thead>
+                                    <tr className="bg-gray-50/75 border-b border-gray-100 text-gray-700 text-[11px] font-bold uppercase tracking-wider">
+                                        <th className="px-5 py-4 w-[40%]">Tên đề tài & mô tả</th>
+                                        <th className="px-5 py-4 w-[15%]">Chuyên môn</th>
+                                        <th className="px-5 py-4 w-[20%]">Công nghệ sử dụng</th>
+                                        <th className="px-5 py-4 w-[15%]">Người đề xuất</th>
+                                        <th className="px-5 py-4 w-[10%] text-center">Đăng ký</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 text-gray-700 text-xs font-medium">
+                                    {displayTopics.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="text-center py-16 text-gray-400 font-bold">
+                                                Không tìm thấy đề tài nào khả dụng.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        displayTopics.map((topic) => {
+                                            const isSelected = hasConfirmedTopic && String(capstone?.topic_id) === String(topic.topic_id);
+                                            const isPending = pendingTopicRequest && String(pendingTopicRequest.target_id) === String(topic.topic_id);
 
-                            return (
-                                <div
-                                    key={topic.topic_id}
-                                    className={`bg-white p-6 rounded-[24px] border transition-all flex flex-col gap-4 shadow-sm ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/10' : isPending ? 'border-amber-500 ring-2 ring-amber-500/10' : 'border-gray-100 hover:border-gray-200'
-                                        }`}
-                                >
-                                    <div className="flex justify-between items-start gap-4">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 w-fit">
-                                                {topic.expertise?.name || 'Lĩnh vực chuyên môn'}
-                                            </span>
-                                            <h3 className="text-base font-bold text-gray-900 mt-1 leading-snug">
-                                                {topic.title}
-                                            </h3>
-                                        </div>
-
-                                        <div className="relative group">
-                                            {/* Tooltip khi bị vô hiệu hoá */}
-                                            {!isSelected && !isPending && (hasConfirmedTopic || capstone?.status === 'CANCEL_REQUESTED') && (
-                                                <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                                                    {capstone?.status === 'CANCEL_REQUESTED'
-                                                        ? 'Hồ sơ đang yêu cầu hủy'
-                                                        : 'Bạn đã có đề tài chính thức'}
-                                                </span>
-                                            )}
-                                            <button
-                                                onClick={() => {
-                                                    setActiveRegisterTopic(topic);
-                                                    setMessage('');
-                                                    setSelectedFile(null);
-                                                }}
-                                                disabled={isSubmitting || isSelected || isPending || hasConfirmedTopic || capstone?.status === 'CANCEL_REQUESTED'}
-                                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${isSelected
-                                                    ? 'bg-blue-50 text-blue-600 border border-blue-200 cursor-default font-black'
-                                                    : isPending
-                                                        ? 'bg-amber-50 text-amber-600 border border-amber-200 cursor-default font-black'
-                                                        : 'bg-[#2e7d32] hover:bg-[#205723] text-white disabled:bg-gray-300 disabled:text-gray-100 disabled:cursor-not-allowed'
+                                            return (
+                                                <tr
+                                                    key={topic.topic_id}
+                                                    className={`hover:bg-slate-50/50 transition-colors align-middle ${
+                                                        isSelected ? 'bg-blue-50/30' : isPending ? 'bg-amber-50/20' : ''
                                                     }`}
-                                            >
-                                                {isSelected ? 'Đề tài hiện tại' : isPending ? 'Chờ duyệt' : 'Đăng ký đề tài'}
-                                            </button>
-                                        </div>
-                                    </div>
+                                                >
+                                                    {/* Title & Description */}
+                                                    <td className="px-5 py-4">
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="font-extrabold text-gray-900 text-sm leading-snug">
+                                                                {topic.title}
+                                                            </span>
+                                                            <span className="text-[11px] text-gray-400 font-medium line-clamp-2">
+                                                                {topic.description || 'Chưa có mô tả chi tiết cho đề tài này.'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
 
-                                    {topic.description && (
-                                        <p className="text-sm text-gray-600 font-medium leading-relaxed bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50">
-                                            {topic.description}
-                                        </p>
+                                                    {/* Expertise */}
+                                                    <td className="px-5 py-4">
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200/50">
+                                                            {topic.expertise?.name || '---'}
+                                                        </span>
+                                                    </td>
+
+                                                    {/* Technologies */}
+                                                    <td className="px-5 py-4 text-gray-600 font-semibold leading-relaxed">
+                                                        {topic.technologies || '---'}
+                                                    </td>
+
+                                                    {/* Creator */}
+                                                    <td className="px-5 py-4">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-gray-900">{topic.creator?.fullname || '---'}</span>
+                                                            <span className="text-[10px] text-gray-400 mt-0.5">{topic.creator?.role?.role_name === 'Lecturer' ? 'Giảng viên' : 'Sinh viên'}</span>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Register Action */}
+                                                    <td className="px-5 py-4 text-center">
+                                                        <div className="relative group inline-block">
+                                                            {!isSelected && !isPending && (hasConfirmedTopic || capstone?.status === 'CANCEL_REQUESTED') && (
+                                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-red-600 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md whitespace-nowrap z-10">
+                                                                    {capstone?.status === 'CANCEL_REQUESTED'
+                                                                        ? 'Hồ sơ đang yêu cầu hủy'
+                                                                        : 'Bạn đã có đề tài chính thức'}
+                                                                </span>
+                                                            )}
+                                                            <button
+                                                                onClick={() => {
+                                                                    setActiveRegisterTopic(topic);
+                                                                    setMessage('');
+                                                                    setSelectedFile(null);
+                                                                }}
+                                                                disabled={isSubmitting || isSelected || isPending || hasConfirmedTopic || capstone?.status === 'CANCEL_REQUESTED'}
+                                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ${
+                                                                    isSelected
+                                                                        ? 'bg-blue-50 text-blue-600 border border-blue-200 cursor-default font-black'
+                                                                        : isPending
+                                                                            ? 'bg-amber-50 text-amber-600 border border-amber-200 cursor-default font-black'
+                                                                            : 'bg-[#2e7d32] hover:bg-[#205723] text-white disabled:bg-gray-200 disabled:text-gray-100 disabled:cursor-not-allowed'
+                                                                }`}
+                                                            >
+                                                                {isSelected ? 'Đề tài của bạn' : isPending ? 'Chờ duyệt' : 'Đăng ký'}
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
                                     )}
+                                </tbody>
+                            </table>
+                        </div>
 
-                                    <div className="flex flex-wrap gap-2 text-xs font-semibold text-gray-500 items-center justify-between border-t border-gray-50 pt-3">
-                                        <div>
-                                            Công nghệ sử dụng: <strong className="text-gray-700">{topic.technologies}</strong>
-                                        </div>
-                                        {topic.creator && (
-                                            <div>
-                                                Người đề xuất: <strong className="text-gray-700">{topic.creator.fullname}</strong>
-                                            </div>
-                                        )}
+                        {/* Phân Trang ở cuối bảng */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between border-t border-gray-100 bg-white px-5 py-4">
+                                <div className="flex flex-1 justify-between sm:hidden">
+                                    <button
+                                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="relative inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                    >
+                                        Trước
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="relative ml-3 inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                    >
+                                        Sau
+                                    </button>
+                                </div>
+                                <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                                    <div>
+                                        <p className="text-xs text-gray-500 font-semibold">
+                                            Hiển thị trang <span className="text-gray-900 font-bold">{currentPage}</span> / <span className="text-gray-900 font-bold">{totalPages}</span> (Tổng <span className="text-gray-900 font-bold">{totalItems}</span> đề tài)
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <nav className="isolate inline-flex -space-x-px rounded-lg shadow-sm" aria-label="Pagination">
+                                            <button
+                                                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                                disabled={currentPage === 1}
+                                                className="relative inline-flex items-center rounded-l-lg px-2 py-1.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"
+                                            >
+                                                <span className="sr-only">Trước</span>
+                                                <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                    <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                                                </svg>
+                                            </button>
+
+                                            {getPaginationRange(currentPage, totalPages).map((page, idx) => {
+                                                if (page === '...') {
+                                                    return (
+                                                        <span
+                                                            key={`ellipsis-${idx}`}
+                                                            className="relative inline-flex items-center px-3 py-1.5 text-xs font-semibold text-gray-400 ring-1 ring-inset ring-gray-300 bg-white select-none"
+                                                        >
+                                                            ...
+                                                        </span>
+                                                    );
+                                                }
+                                                const pageNum = Number(page);
+                                                return (
+                                                    <button
+                                                        key={pageNum}
+                                                        onClick={() => setCurrentPage(pageNum)}
+                                                        className={`relative inline-flex items-center px-3 py-1.5 text-xs font-bold focus:z-20 ${
+                                                            currentPage === pageNum
+                                                                ? 'z-10 bg-blue-600 text-white ring-1 ring-blue-600 focus-visible:outline focus-visible:outline-2'
+                                                                : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                );
+                                            })}
+
+                                            <button
+                                                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                                disabled={currentPage === totalPages}
+                                                className="relative inline-flex items-center rounded-r-lg px-2 py-1.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50"
+                                            >
+                                                <span className="sr-only">Sau</span>
+                                                <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                    <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                                                </svg>
+                                            </button>
+                                        </nav>
                                     </div>
                                 </div>
-                            );
-                        })
-                    )}
-                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* CỘT PHẢI: TRẠNG THÁI HIỆN TẠI */}

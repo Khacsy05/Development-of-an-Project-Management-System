@@ -117,6 +117,15 @@ export class TopicService {
       where: {
         topic_id: id,
       },
+      include: {
+        faculty: true,
+        expertise: true,
+        creator: {
+          include: {
+            role: true
+          }
+        }
+      }
     });
   }
 

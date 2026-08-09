@@ -19,13 +19,15 @@ export class UsersService {
     const roleId = this.mapRoleToId(role);
     const skip = (pageNumber - 1) * limitNumber;
 
-    const where = {
+    const where: any = {
       role_id: roleId,
-      
-      fullname: fullname? {
-        contains: normalizedFullname,
-        mode: 'insensitive' as const,
-      } : undefined
+    };
+
+    if (normalizedFullname) {
+      where.OR = [
+        { fullname: { contains: normalizedFullname } },
+        { usercode: { contains: normalizedFullname } },
+      ];
     }
     
 

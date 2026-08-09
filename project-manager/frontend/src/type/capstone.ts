@@ -1,4 +1,8 @@
 
+import { Topic } from './topic';
+import { Lecturer } from './lecturer';
+import { User } from './user';
+
 export enum CapstoneStatus {
   PENDING = 'PENDING',
   PENDING_LECTURER = 'PENDING_LECTURER',   // Đang chờ Giảng viên hướng dẫn duyệt
@@ -57,15 +61,9 @@ export interface Capstone {
   status: string;
   topic_id?: string | null;
   lecturer_id?: string | null;
-  topic?: {
-    title: string;
-    expertise?: {
-      name: string;
-    };
-  } | null;
-  lecturer?: {
-    fullname: string;
-  } | null;
+  topic?: Topic | null;
+  lecturer?: Lecturer | null;
+  student?: User | null;
   submission: Submission[];
   requests?: any[];
   council?: {

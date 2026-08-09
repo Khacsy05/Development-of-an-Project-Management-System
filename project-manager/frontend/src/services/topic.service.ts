@@ -40,3 +40,13 @@ export async function deleteTopic(id: string) {
         throw error.response?.data?.message || 'Lỗi khi xóa đề tài';
     }
 }
+
+export async function getTopicById(id: string) {
+    try {
+        const response = await apiClient.get(`/topics/${id}`);
+        return response.data;
+    } catch (error: any) {
+        console.error('Lỗi khi lấy thông tin chi tiết đề tài:', error);
+        throw error.response?.data?.message || 'Lỗi khi lấy chi tiết đề tài';
+    }
+}

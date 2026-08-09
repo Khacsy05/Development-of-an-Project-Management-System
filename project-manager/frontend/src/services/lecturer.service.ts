@@ -14,3 +14,13 @@ export async function getLecturerList(params?: { fullname?: string; page?: numbe
         throw error;
     }
 }
+
+export async function getLecturerById(id: string) {
+    try {
+        const response = await apiClient.get(`/users/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error('Lỗi khi lấy chi tiết giảng viên:', error);
+        throw error;
+    }
+}

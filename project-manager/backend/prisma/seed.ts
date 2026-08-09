@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { CapstoneStatus, CouncilPosition, PrismaClient, UserRole } from '@prisma/client';
+import { CapstoneStatus, CouncilPosition, PrismaClient, RequestStatus, SubmissionStatus, UserRole } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import 'dotenv/config';
 
@@ -19,494 +19,525 @@ const adapter = new PrismaMariaDb({
 
 const prisma = new PrismaClient({ adapter });
 
-
-
-
 async function main() {
-  console.log('🌱 Bắt đầu seed dữ liệu...');
+  console.log('🌱 Bắt đầu dọn dẹp và seed dữ liệu mới...');
 
+  // 1. Tránh khóa ngoại bằng cách xóa theo thứ tự phụ thuộc ngược
+  await prisma.councilEvaluation.deleteMany({});
+  await prisma.councilMember.deleteMany({});
+  await prisma.capstoneSubmission.deleteMany({});
+  await prisma.capstoneRequest.deleteMany({});
+  await prisma.capstone.deleteMany({});
+  await prisma.council.deleteMany({});
+  await prisma.topic.deleteMany({});
+  await prisma.lecturerExpertise.deleteMany({});
+  await prisma.expertise.deleteMany({});
+  await prisma.milestone.deleteMany({});
+  await prisma.semester.deleteMany({});
+  await prisma.academicYear.deleteMany({});
+  await prisma.studentProfile.deleteMany({});
+  await prisma.class.deleteMany({});
+  await prisma.major.deleteMany({});
+  
+  // Set dean_id to null first to avoid circular reference on delete
+  await prisma.faculty.updateMany({ data: { dean_id: null } });
+  await prisma.user.deleteMany({});
+  await prisma.faculty.deleteMany({});
+  await prisma.role.deleteMany({});
+
+  console.log('🧹 Đã dọn dẹp sạch sẽ cơ sở dữ liệu.');
+
+  // ==========================================
   // 1. Tạo các Vai trò (Role)
-  // Sử dụng upsert để nếu chạy lại lệnh seed không bị trùng lặp dữ liệu
-  const adminRole = await prisma.role.upsert({
-    where: { role_name: UserRole.Admin },
-    update: {},
-    create: { role_id: 1n, role_name: UserRole.Admin },
+  // ==========================================
+  const adminRole = await prisma.role.create({
+    data: { role_id: 1n, role_name: UserRole.Admin }
   });
-
-  const lecturerRole = await prisma.role.upsert({
-    where: { role_name: UserRole.Lecturer },
-    update: {},
-    create: { role_id: 2n, role_name: UserRole.Lecturer },
+  const lecturerRole = await prisma.role.create({
+    data: { role_id: 2n, role_name: UserRole.Lecturer }
   });
-
-
-  const studentRole = await prisma.role.upsert({
-    where: { role_name: UserRole.Student },
-    update: {},
-    create: { role_id: 3n, role_name: UserRole.Student },
+  const studentRole = await prisma.role.create({
+    data: { role_id: 3n, role_name: UserRole.Student }
   });
-
-
 
   const hashedPassword = await bcrypt.hash('password_da_ma_hoa_cho_nay', 10);
 
+  // ==========================================
+  // 2. Tạo các Khoa (Faculty)
+  // ==========================================
   const danhSachFaculty = [
-    { faculty_code: 'CNTT', name: 'Khoa Công nghệ thông tin' },
-    { faculty_code: 'CT', name: 'Khoa Công trình' },
-    { faculty_code: 'KT', name: 'Khoa Kinh tế' },
-    { faculty_code: 'CK', name: 'Khoa Cơ Khí' },
-    { faculty_code: 'KTN', name: 'Khoa Khoa học tự nhiên' },
-    { faculty_code: 'KHXH', name: 'Khoa Khoa học xã hội' },
-    { faculty_code: 'QTKD', name: 'Khoa Quản trị kinh doanh' },
+    { faculty_id: 1000n, faculty_code: 'CNTT', name: 'Khoa Công nghệ thông tin' },
+    { faculty_id: 1001n, faculty_code: 'CT', name: 'Khoa Công trình' },
+    { faculty_id: 1002n, faculty_code: 'KT', name: 'Khoa Kinh tế' },
+    { faculty_id: 1003n, faculty_code: 'CK', name: 'Khoa Cơ Khí' },
   ];
 
-  for (let index = 0; index < danhSachFaculty.length; index++) {
-    const faculty = danhSachFaculty[index];
-    const falcultyId = 1000n + BigInt(index);
-    await prisma.faculty.upsert({
-      where: { faculty_code: faculty.faculty_code },
-      update: {},
-      create: {
-        faculty_id: falcultyId,
-        faculty_code: faculty.faculty_code,
-        name: faculty.name,
-      },
-    });
+  for (const f of danhSachFaculty) {
+    await prisma.faculty.create({ data: f });
   }
 
-  // 2. Tạo tài khoản Giảng viên (User)
-  // Cho vòng lặp chạy từ 1 đến 6 để tạo tự động 6 giảng viên
-  for (let i = 1; i <= 6; i++) {
-    // Tự động tính toán giá trị dựa theo biến chạy i
-    const userId = 1000n + BigInt(i);              // Sẽ sinh ra: 1001n, 1002n, 1003n...
-    const usercode = `GV${String(i).padStart(3, '0')}`; // Sẽ sinh ra: GV001, GV002, GV003...
-    const username = `gv_giangvien${i}`;           // Sẽ sinh ra: gv_giangvien1, gv_giangvien2...
-
-    await prisma.user.upsert({
-      where: { user_id: userId },
-      update: {},
-      create: {
+  // ==========================================
+  // 3. Tạo tài khoản Giảng viên (User)
+  // ==========================================
+  // Tạo 15 giảng viên cho khoa CNTT để phân công hội đồng phong phú
+  const lecturers: any[] = [];
+  for (let i = 1; i <= 15; i++) {
+    const userId = 1000n + BigInt(i);
+    const usercode = `GV${String(i).padStart(3, '0')}`;
+    const username = `gv_giangvien${i}`;
+    const lec = await prisma.user.create({
+      data: {
         user_id: userId,
         usercode: usercode,
         username: username,
         password: hashedPassword,
         email: `giangvien${i}@tlu.edu.vn`,
-        fullname: `Giảng Viên Thử Nghiệm ${i}`,
-        role_id: lecturerRole.role_id, // Gán quyền Giảng viên đã tạo ở bước trước,
-        faculty_id: 1000n
-
-      },
+        fullname: `Giảng Viên ${i}`,
+        role_id: lecturerRole.role_id,
+        faculty_id: 1000n,
+      }
     });
+    lecturers.push(lec);
   }
 
-  const admin = await prisma.user.upsert({
-    where: { user_id: 1n },
-    update: {},
-    create: {
+  // Gán GV001 (user_id: 1001n) làm Trưởng khoa CNTT
+  await prisma.faculty.update({
+    where: { faculty_id: 1000n },
+    data: { dean_id: 1001n }
+  });
+
+  // Tạo tài khoản Admin tối cao
+  await prisma.user.create({
+    data: {
       user_id: 1n,
       usercode: "ADMIN001",
       username: "admin",
       password: hashedPassword,
       email: "admin@tlu.edu.vn",
-      fullname: "Quản trị viên",
-      role_id: adminRole.role_id, // Gán quyền Quản trị viên đã tạo ở bước trước
-    },
-  })
+      fullname: "Quản trị viên hệ thống",
+      role_id: adminRole.role_id,
+    }
+  });
 
+  // ==========================================
   // 4. Tạo Chuyên ngành và Lớp học
-  const major = await prisma.major.upsert({
-    where: { major_id: 1n },
-    update: {},
-    create: {
-      major_id: 1n,
-      major_name: 'Hệ thống thông tin',
-      faculty_id: 1000n, // Gán cho Khoa CNTT (faculty_id: 1001n)
-    },
-  });
-
-  const cacNganhKhac = [
-    'Công nghệ thông tin',
-    'Kỹ thuật phần mềm',
-    'Khoa học máy tính',
-    'An toàn thông tin',
-    'Quản trị kinh doanh',
+  // ==========================================
+  const majors = [
+    { id: 1n, name: 'Hệ thống thông tin' },
+    { id: 2n, name: 'Kỹ thuật phần mềm' },
+    { id: 3n, name: 'Khoa học máy tính' },
+    { id: 4n, name: 'An toàn thông tin' },
   ];
 
-  // Duyệt mảng để tự động tăng major_id từ số 2n trở đi
-  for (let index = 0; index < cacNganhKhac.length; index++) {
-    const nextMajorId = 2n + BigInt(index); // Sẽ sinh ra: 2n, 3n, 4n, 5n...
-
-    await prisma.major.upsert({
-      where: { major_id: nextMajorId },
-      update: {},
-      create: {
-        major_id: nextMajorId,
-        faculty_id: 1000n, // Gán cho Khoa CNTT (faculty_id: 1001n)
-        major_name: cacNganhKhac[index],
-      },
+  for (const m of majors) {
+    await prisma.major.create({
+      data: {
+        major_id: m.id,
+        major_name: m.name,
+        faculty_id: 1000n,
+      }
     });
   }
 
-  const classData = await prisma.class.upsert({
-    where: { class_id: 1n },
-    update: {},
-    create: {
-      class_id: 1n,
-      class_name: '65HTTT',
-      major_id: major.major_id,
-      lecturer_id: 1001n, // Gán giảng viên quản lý lớp
-    },
-  });
-
-  const danhSachLopKhac = [
-    { name: '63CNTT4', majorId: 2n, lecturerId: 1002n }, // Lớp ngành CNTT (2n), giảng viên GV002 quản lý
-    { name: '64KTPM1', majorId: 3n, lecturerId: 1003n }, // Lớp ngành KTPM (3n), giảng viên GV003 quản lý
-    { name: '65CNTT1', majorId: 2n, lecturerId: 1004n },
-    { name: '65HTTT2', majorId: 1n, lecturerId: 1005n },
-    { name: '64KHMT1', majorId: 4n, lecturerId: 1006n },
+  const classes = [
+    { id: 1n, name: '65HTTT1', majorId: 1n, lecturerId: 1001n },
+    { id: 2n, name: '65KTPM1', majorId: 2n, lecturerId: 1002n },
+    { id: 3n, name: '65KHMT1', majorId: 3n, lecturerId: 1003n },
+    { id: 4n, name: '65ATTT1', majorId: 4n, lecturerId: 1004n },
+    { id: 5n, name: '65CNTT1', majorId: 2n, lecturerId: 1005n },
   ];
 
-  // Duyệt mảng để tự động tăng class_id từ số 2n trở đi
-  for (let index = 0; index < danhSachLopKhac.length; index++) {
-    const nextClassId = 2n + BigInt(index); // Sẽ sinh ra: 2n, 3n, 4n, 5n...
-    const lop = danhSachLopKhac[index];
-
-    await prisma.class.upsert({
-      where: { class_id: nextClassId },
-      update: {},
-      create: {
-        class_id: nextClassId,
-        class_name: lop.name,
-        major_id: lop.majorId,
-        lecturer_id: lop.lecturerId,
-      },
+  for (const c of classes) {
+    await prisma.class.create({
+      data: {
+        class_id: c.id,
+        class_name: c.name,
+        major_id: c.majorId,
+        lecturer_id: c.lecturerId,
+      }
     });
   }
 
-  // 5. Tạo tài khoản Sinh viên và thông tin bổ sung cho Sinh viên (StudentProfile)
-  for (let i = 1; i <= 5; i++) {
-    const userId = 2351170610n + BigInt(i); // Sẽ sinh ra: 2351170611n, 2351170612n, 2351170613n...
+  // ==========================================
+  // 5. Tạo 60 tài khoản Sinh viên & Profile
+  // ==========================================
+  const students: any[] = [];
+  for (let i = 1; i <= 60; i++) {
+    const userId = 2351170000n + BigInt(i);
     const usercode = `SV${String(i).padStart(3, '0')}`;
     const username = `sv_sinhvien${i}`;
-    await prisma.user.upsert({
-      where: { user_id: userId },
-      update: {},
-      create: {
+    const stu = await prisma.user.create({
+      data: {
         user_id: userId,
         usercode: usercode,
         username: username,
         password: hashedPassword,
         email: `student${i}@e.tlu.edu.vn`,
-        fullname: `Sinh Viên Thử Nghiệm ${i}`,
+        fullname: `Sinh Viên ${i}`,
         role_id: studentRole.role_id,
         faculty_id: 1000n,
-      },
+      }
     });
-    const randomClassId = BigInt((i % 6) + 1);
-    const randomGPA = parseFloat((2.0 + Math.random() * 2.0).toFixed(2));
-    await prisma.studentProfile.upsert({
-      where: { user_id: userId },
-      update: {},
-      create: {
+    students.push(stu);
+
+    const randomClassId = BigInt((i % 5) + 1);
+    const randomGPA = parseFloat((2.5 + Math.random() * 1.4).toFixed(2));
+    await prisma.studentProfile.create({
+      data: {
         user_id: userId,
         class_id: randomClassId,
         gpa: randomGPA,
-      },
+      }
     });
   }
 
-
-  const danhSachNamHoc = [
-    { year_name: '2023-2024', star_year: 2023, end_year: 2024 },
-    { year_name: '2024-2025', star_year: 2024, end_year: 2025 },
-    { year_name: '2025-2026', star_year: 2025, end_year: 2026 },
-    { year_name: '2026-2027', star_year: 2026, end_year: 2027 },
-  ];
-  for (let index = 0; index < danhSachNamHoc.length; index++) {
-    const nextAcademicYearId = 1n + BigInt(index); // Sẽ sinh ra: 1n, 2n, 3n, 4n...
-    const namHoc = danhSachNamHoc[index];
-    await prisma.academicYear.upsert({
-      where: { year_id: nextAcademicYearId },
-      update: {
-        year_id: nextAcademicYearId,
-        year_name: namHoc.year_name,
-        start_year: namHoc.star_year,
-        end_year: namHoc.end_year,
-      },
-      create: {
-        year_id: nextAcademicYearId,
-        year_name: namHoc.year_name,
-        start_year: namHoc.star_year,
-        end_year: namHoc.end_year,
-      },
-    });
-  }
-
-  const danhSachHocKy = [
-    { targetYearName: '2023-2024', semester_name: 'Học kỳ 1', startMonthDay: '09-01', endMonthDay: '01-15' },
-    { targetYearName: '2023-2024', semester_name: 'Học kỳ 2', startMonthDay: '02-01', endMonthDay: '06-30' },
-    { targetYearName: '2024-2025', semester_name: 'Học kỳ 3', startMonthDay: '09-01', endMonthDay: '01-15' },
-    { targetYearName: '2024-2025', semester_name: 'Học kỳ 4', startMonthDay: '02-01', endMonthDay: '06-30' },
-    { targetYearName: '2025-2026', semester_name: 'Học kỳ 5', startMonthDay: '09-01', endMonthDay: '01-15' },
-    { targetYearName: '2025-2026', semester_name: 'Học kỳ 6', startMonthDay: '02-01', endMonthDay: '06-30' },
-    { targetYearName: '2026-2027', semester_name: 'Học kỳ 7', startMonthDay: '09-01', endMonthDay: '1-15' },
-    { targetYearName: '2026-2027', semester_name: 'Học kỳ 8', startMonthDay: '02-01', endMonthDay: '06-30' },
-  ];
-
-  for (let index = 0; index < danhSachHocKy.length; index++) {
-    const nextSemesterId = 1n + BigInt(index); // Sẽ sinh ra: 1n, 2n, 3n...
-    const hocKy = danhSachHocKy[index];
-    const academicYearData = await prisma.academicYear.findFirst({
-      where: { year_name: hocKy.targetYearName }
-    });
-    if (!academicYearData) {
-      throw new Error(`Không tìm thấy năm học có tên là ${hocKy.targetYearName} trong DB!`);
+  // ==========================================
+  // 6. Tạo Năm học & Học kỳ
+  // ==========================================
+  const year2526 = await prisma.academicYear.create({
+    data: {
+      year_id: 3n,
+      year_name: '2025-2026',
+      start_year: 2025,
+      end_year: 2026,
     }
-    const fullStartDate = new Date(`${academicYearData.start_year}-${hocKy.startMonthDay}`);
+  });
 
-    // Học kỳ 1 thường kết thúc vào đầu năm sau (ví dụ tháng 1 năm 2024), nên ta dùng end_year của năm học
-    const fullEndDate = new Date(`${academicYearData.end_year}-${hocKy.endMonthDay}`);
-    await prisma.semester.upsert({
-      where: { semester_id: nextSemesterId },
-      update: {
-        semester_id: nextSemesterId,
-        year_id: academicYearData.year_id,
-        semester_name: hocKy.semester_name,
-        start_date: fullStartDate,
-        end_date: fullEndDate,
-      },
-      create: {
-        semester_id: nextSemesterId,
-        year_id: academicYearData.year_id,
-        semester_name: hocKy.semester_name,
-        start_date: fullStartDate,
-        end_date: fullEndDate,
-      },
-    });
-  }
-
+  const semester8 = await prisma.semester.create({
+    data: {
+      semester_id: 8n,
+      year_id: year2526.year_id,
+      semester_name: 'Học kỳ 8',
+      start_date: new Date('2026-02-01T00:00:00Z'),
+      end_date: new Date('2026-06-30T23:59:59Z'),
+    }
+  });
 
   // ==========================================
-  // 6. Tạo Mốc thời gian nộp bài (Milestones)
+  // 7. Tạo Mốc thời gian nộp bài (Milestones)
   // ==========================================
-  // Ta sẽ tạo mốc thời gian mẫu cho Học kỳ 8 (semester_id: 8n - Kỳ đang làm đồ án)
-  const danhSachMilestones = [
-    { phase_name: 'Nộp đề cương sơ bộ', daysFromStart: 15, description: 'Sinh viên nộp file PDF đề cương đồ án có chữ ký GVHD.' },
-    { phase_name: 'Báo cáo tiến độ lần 1', daysFromStart: 45, description: 'Báo cáo tiến độ hoàn thành 30% khối lượng công việc.' },
-    { phase_name: 'Báo cáo tiến độ lần 2', daysFromStart: 75, description: 'Báo cáo tiến độ hoàn thành 70% khối lượng công việc.' },
-    { phase_name: 'Nộp báo cáo cuối cùng', daysFromStart: 105, description: 'Nộp toàn bộ source code lên GitHub và file báo cáo bản cứng.' },
+  const milestonesData = [
+    { milestone_id: 1n, phase_name: 'Nộp đề cương sơ bộ', days: 15, desc: 'Nộp file PDF đề cương đồ án có chữ ký GVHD.' },
+    { milestone_id: 2n, phase_name: 'Báo cáo tiến độ lần 1', days: 45, desc: 'Báo cáo tiến độ hoàn thành 30% khối lượng công việc.' },
+    { milestone_id: 3n, phase_name: 'Báo cáo tiến độ lần 2', days: 75, desc: 'Báo cáo tiến độ hoàn thành 70% khối lượng công việc.' },
+    { milestone_id: 4n, phase_name: 'Nộp báo cáo cuối cùng', days: 105, desc: 'Nộp toàn bộ source code lên GitHub và file báo cáo bản cứng.' },
   ];
 
-  // Lấy ngày bắt đầu của học kỳ 8 để làm mốc tính deadline tự động
-  const targetSemester = await prisma.semester.findUnique({ where: { semester_id: 8n } });
-  const baseDate = targetSemester ? new Date(targetSemester.start_date) : new Date();
-
-  for (let index = 0; index < danhSachMilestones.length; index++) {
-    const nextMilestoneId = 1n + BigInt(index);
-    const ms = danhSachMilestones[index];
-
-    // Tự động cộng thêm ngày để ra deadline thực tế sinh động
+  const baseDate = new Date(semester8.start_date);
+  for (const ms of milestonesData) {
     const deadlineDate = new Date(baseDate);
-    deadlineDate.setDate(deadlineDate.getDate() + ms.daysFromStart);
-
-    await prisma.milestone.upsert({
-      where: { milestone_id: nextMilestoneId },
-      update: {},
-      create: {
-        milestone_id: nextMilestoneId,
-        semester_id: 8n, // Gán cho học kỳ 8 mẫu
+    deadlineDate.setDate(deadlineDate.getDate() + ms.days);
+    await prisma.milestone.create({
+      data: {
+        milestone_id: ms.milestone_id,
+        semester_id: semester8.semester_id,
         phase_name: ms.phase_name,
-        description: ms.description,
+        description: ms.desc,
         deadline: deadlineDate,
-      },
+      }
     });
   }
 
   // ==========================================
-  // 7. Tạo Lĩnh vực chuyên môn (Expertises)
+  // 8. Tạo Chuyên ngành chuyên môn (Expertise)
   // ==========================================
-  const danhSachChuyenMon = [
-    { name: 'Web Development', description: 'Phát triển ứng dụng Web hệ sinh thái PHP/NodeJS/Python...' },
-    { name: 'AI & Machine Learning', description: 'Trí tuệ nhân tạo, xử lý ngôn ngữ tự nhiên, học máy...' },
-    { name: 'Mobile App Development', description: 'Phát triển ứng dụng di động Flutter, React Native, Native...' },
-    { name: 'Cloud Computing & DevOps', description: 'Hệ thống đám mây AWS, Docker, Kubernetes, CI/CD...' },
+  const chuyenMon = [
+    { id: 1n, name: 'Web Development', desc: 'Phát triển ứng dụng Web NodeJS/Laravel/Java...' },
+    { id: 2n, name: 'AI & Machine Learning', desc: 'Trí tuệ nhân tạo, xử lý hình ảnh, NLP...' },
+    { id: 3n, name: 'Mobile App Development', desc: 'Ứng dụng di động Flutter/React Native...' },
+    { id: 4n, name: 'Cloud & DevOps', desc: 'Triển khai Docker, Kubernetes, CI/CD...' },
   ];
 
-  for (let index = 0; index < danhSachChuyenMon.length; index++) {
-    const nextExpertiseId = 1n + BigInt(index);
-    const exp = danhSachChuyenMon[index];
-    await prisma.expertise.upsert({
-      where: { expertise_id: nextExpertiseId },
-      update: {},
-      create: {
-        expertise_id: nextExpertiseId,
-        name: exp.name,
-        description: exp.description,
-      },
+  for (const cm of chuyenMon) {
+    await prisma.expertise.create({
+      data: {
+        expertise_id: cm.id,
+        name: cm.name,
+        description: cm.desc,
+      }
     });
   }
 
-  // ==========================================
-  // 8. Gán chuyên môn cho Giảng viên (LecturerExpertises)
-  // ==========================================
-  // Gán ngẫu nhiên cho 6 giảng viên (ID từ 1001n -> 1006n) mỗi người 1-2 chuyên môn mẫu
-  for (let i = 1; i <= 6; i++) {
+  // Gán chuyên môn cho 15 giảng viên
+  for (let i = 1; i <= 15; i++) {
     const currentLecturerId = 1000n + BigInt(i);
-    // Giảng viên lẻ gán chuyên môn 1 & 2, giảng viên chẵn gán chuyên môn 3 & 4
-    const primaryExpId = i % 2 === 1 ? 1n : 3n;
-    const secondaryExpId = i % 2 === 1 ? 2n : 4n;
-
-    // Do bảng này là quan hệ M:N dùng Composite Key (lecturer_id_expertise_id), 
-    // cú pháp where của upsert trong Prisma sẽ gộp chung 2 khóa:
-    await prisma.lecturerExpertise.upsert({
-      where: {
-        lecturer_id_expertise_id: {
-          lecturer_id: currentLecturerId,
-          expertise_id: primaryExpId
-        }
-      },
-      update: {},
-      create: {
+    const expId = BigInt((i % 4) + 1);
+    await prisma.lecturerExpertise.create({
+      data: {
         lecturer_id: currentLecturerId,
-        expertise_id: primaryExpId
-      }
-    });
-
-    await prisma.lecturerExpertise.upsert({
-      where: {
-        lecturer_id_expertise_id: {
-          lecturer_id: currentLecturerId,
-          expertise_id: secondaryExpId
-        }
-      },
-      update: {},
-      create: {
-        lecturer_id: currentLecturerId,
-        expertise_id: secondaryExpId
+        expertise_id: expId,
       }
     });
   }
 
   // ==========================================
-  // 9. Tạo Ngân hàng Đề tài (Topics)
+  // 9. Tạo 40 Đề tài (Topics)
   // ==========================================
-  const danhSachDeTai = [
-    { title: 'Xây dựng hệ thống quản lý thực tập sinh IPMS', expId: 1n, tech: 'Laravel, React, Tailwind CSS, Docker', isBank: 1, createdBy: 1001n },
-    { title: 'Ứng dụng Học sâu nhận diện khuôn mặt điểm danh sinh viên', expId: 2n, tech: 'Python, Fast API, PyTorch, MySQL', isBank: 1, createdBy: 1002n },
-    { title: 'Xây dựng App quản lý chi tiêu cá nhân thông minh', expId: 3n, tech: 'Flutter, NodeJS, MongoDB', isBank: 1, createdBy: 1003n },
-    { title: 'Triển khai hạ tầng Microservices phục vụ E-commerce', expId: 4n, tech: 'AWS, Kubernetes, Docker, Go', isBank: 1, createdBy: 1004n },
-    { title: 'Nghiên cứu đề xuất Hệ thống Đặt phòng khách sạn trực tuyến', expId: 1n, tech: 'Next.js, Spring Boot, SQL Server', isBank: 0, createdBy: 2351170611n }, // Đề tài do sinh viên tự đề xuất
+  const topics: any[] = [];
+  const topicTitles = [
+    'Hệ thống quản lý thực tập tốt nghiệp IPMS', 'Phần mềm điểm danh tự động bằng FaceID',
+    'Ứng dụng theo dõi sức khỏe kết nối IoT', 'Công cụ tự động hóa CI/CD cho Microservices',
+    'Ví điện tử tích hợp thanh toán mã QR', 'Website đấu giá trực tuyến thời gian thực',
+    'Hệ thống gợi ý khóa học thông minh AI', 'Mạng xã hội nội bộ cho doanh nghiệp',
+    'Quản lý kho hàng thông minh bằng RFID', 'Chatbot tư vấn tuyển sinh Đại học',
+    'Hệ thống giám sát giao thông qua Camera AI', 'Ứng dụng đặt đồ ăn trực tuyến GrabFood clone',
+    'Sàn giao dịch bất động sản tích hợp bản đồ', 'Phần mềm quản lý phòng khám đa khoa',
+    'Ứng dụng học tiếng Anh qua Flashcard AI', 'Cổng thanh toán bảo mật đa chuỗi BlockChain',
+    'Hệ thống lập lịch dạy học tự động cho trường học', 'Website quản lý thư viện số và mượn sách',
+    'Ứng dụng ký số văn bản điện tử bảo mật', 'Nền tảng Livestream bán hàng tích hợp giỏ hàng',
+    'Công cụ phân tích cảm xúc khách hàng Social Media', 'Ứng dụng tìm kiếm phòng trọ sinh viên',
+    'Hệ thống quản lý bán vé xe khách trực tuyến', 'Website thương mại điện tử thời trang đa kênh',
+    'Ứng dụng chia sẻ xe đi chung đường dài', 'Hệ thống cảnh báo cháy nổ tự động qua cảm biến',
+    'Website học trực tuyến Udemy clone', 'Phần mềm quản lý phòng tập Gym và Yoga',
+    'Ứng dụng quét mã vạch kiểm tra nguồn gốc sản phẩm', 'Hệ thống bầu cử trực tuyến dựa trên mã hóa OTP',
+    'Ứng dụng đặt lịch sửa chữa xe tại nhà', 'Hệ thống quản lý rác thải đô thị thông minh',
+    'Website kết nối gia sư và học sinh trực tuyến', 'Phần mềm quản lý tiệm vàng bạc đá quý',
+    'Ứng dụng theo dõi lượng nước tiêu thụ hộ gia đình', 'Hệ thống định vị xe buýt trường học theo thời gian thực',
+    'Mạng xã hội tìm kiếm bạn cùng phòng ký túc xá', 'Website tuyển dụng việc làm IT chuyên sâu',
+    'Hệ thống chấm điểm code tự động CodeForces clone', 'Ứng dụng đọc truyện tranh trực tuyến có bản quyền'
   ];
 
-  for (let index = 0; index < danhSachDeTai.length; index++) {
-    const nextTopicId = 1n + BigInt(index);
-    const tp = danhSachDeTai[index];
-
-    await prisma.topic.upsert({
-      where: { topic_id: nextTopicId },
-      update: {},
-      create: {
-        topic_id: nextTopicId,
-        expertise_id: tp.expId,
-        created_by: tp.createdBy,
+  for (let i = 1; i <= 60; i++) {
+    const creatorId = 1000n + BigInt((i % 15) + 1); // Chia đều người tạo trong 15 GV
+    const expId = BigInt((i % 4) + 1);
+    const isBank = i <= 55; // 55 đề tài ngân hàng, 5 đề tài do sinh viên tự đề xuất
+    const title = topicTitles[i - 1] || `Đề tài nghiên cứu ứng dụng công nghệ số ${i}`;
+    const tp = await prisma.topic.create({
+      data: {
+        topic_id: BigInt(i),
+        expertise_id: expId,
+        created_by: isBank ? creatorId : 2351170000n + BigInt((i % 10) + 1), // SV đề xuất
         faculty_id: 1000n,
-        title: tp.title,
-        description: `Mô tả chi tiết và yêu cầu kỹ thuật cho đề tài: ${tp.title}`,
-        technologies: tp.tech,
-        is_bank_topic: tp.isBank === 1,
-        is_available: true, // Mặc định còn trống
-        status: tp.isBank === 1 ? 'APPROVED' : 'PENDING', // Đề tài SV đề xuất để trạng thái chờ duyệt
-      },
-    });
-  }
-
-  // ==========================================
-  // 10. Tạo Hội đồng Bảo vệ (Councils)
-  // ==========================================
-  const danhSachHoiDong = [
-    { name: 'Hội đồng số 1 - Chuyên ngành Hệ thống thông tin', room: 'Phòng 302', bld: 'Tòa nhà B1' },
-    { name: 'Hội đồng số 2 - Chuyên ngành Kỹ thuật phần mềm', room: 'Phòng 405', bld: 'Tòa nhà C1' },
-  ];
-
-  // Set ngày bảo vệ thử nghiệm vào cuối học kỳ 8 mẫu
-  const defenseStart = new Date(baseDate);
-  defenseStart.setMonth(defenseStart.getMonth() + 4); // Sau 4 tháng làm đồ án
-  const defenseEnd = new Date(defenseStart);
-  defenseEnd.setHours(defenseEnd.getHours() + 4); // Buổi bảo vệ kéo dài 4 tiếng
-
-  for (let index = 0; index < danhSachHoiDong.length; index++) {
-    const nextCouncilId = 1n + BigInt(index);
-    const cc = danhSachHoiDong[index];
-
-    await prisma.council.upsert({
-      where: { council_id: nextCouncilId },
-      update: {},
-      create: {
-        council_id: nextCouncilId,
-        semester_id: 8n,
-        name: cc.name,
-        buildings: cc.bld,
-        rooms: cc.room,
-        start_date: defenseStart,
-        end_date: defenseEnd,
-      },
-    });
-  }
-
-  // ==========================================
-  // 11. Thành viên Hội đồng (CouncilMembers)
-  // ==========================================
-  // Hội đồng 1 gán các GV: 1001 (Chủ tịch), 1002 (Thư ký), 1003 (Phản biện)
-  // Hội đồng 2 gán các GV: 1004 (Chủ tịch), 1005 (Thư ký), 1006 (Phản biện)
-  const phânChứcVụ = [
-    { councilId: 1n, lecturerId: 1001n, pos: 'chairman' },
-    { councilId: 1n, lecturerId: 1002n, pos: 'secretary' },
-    { councilId: 1n, lecturerId: 1003n, pos: 'reviewer' },
-    { councilId: 2n, lecturerId: 1004n, pos: 'chairman' },
-    { councilId: 2n, lecturerId: 1005n, pos: 'secretary' },
-    { councilId: 2n, lecturerId: 1006n, pos: 'reviewer' },
-  ];
-
-  for (let index = 0; index < phânChứcVụ.length; index++) {
-    const member = phânChứcVụ[index];
-    await prisma.councilMember.upsert({
-      where: {
-        council_id_lecturer_id: {
-          council_id: member.councilId,
-          lecturer_id: member.lecturerId,
-        }
-      },
-      update: {},
-      create: {
-        council_id: member.councilId,
-        lecturer_id: member.lecturerId,
-        position: member.pos as CouncilPosition,
+        title: title,
+        description: `Yêu cầu chi tiết và mô tả nghiệp vụ của đề tài: ${title}`,
+        technologies: 'React, Node.js, Express, MySQL, Docker',
+        is_bank_topic: isBank,
+        is_available: true,
+        status: isBank ? 'APPROVED' : 'PENDING',
       }
     });
+    topics.push(tp);
   }
 
   // ==========================================
-  // 12. Hồ sơ Đồ án Tốt nghiệp (Capstones)
+  // 10. Tạo 5 Hội đồng bảo vệ (Councils)
   // ==========================================
-  // Tiến hành gán 5 sinh viên (2351170611n -> 2351170615n) làm 5 đề tài vừa tạo ở trên
-  for (let i = 1; i < 5; i++) {
-    const capstoneId = 1n + BigInt(i);
-    const userId = 2351170610n + BigInt(i);
-    await prisma.capstone.upsert({
-      where: { capstone_id: capstoneId },
-      update: {},
-      create: {
-        capstone_id: capstoneId,
-        student_id: userId,
+  const councils: any[] = [];
+  const roomNames = ['Phòng 301-B1', 'Phòng 402-C1', 'Phòng 505-A5', 'Phòng 102-T4', 'Phòng 303-B2'];
+  for (let i = 1; i <= 5; i++) {
+    const start = new Date(baseDate);
+    start.setDate(start.getDate() + 110);
+    const end = new Date(start);
+    end.setHours(end.getHours() + 4);
+
+    const cc = await prisma.council.create({
+      data: {
+        council_id: BigInt(i),
+        semester_id: semester8.semester_id,
+        name: `Hội đồng Chấm đồ án CNTT số ${i}`,
+        buildings: 'Khu giảng đường chính TLU',
+        rooms: roomNames[i - 1],
         faculty_id: 1000n,
-        semester_id: 8,
-        status: CapstoneStatus.PENDING,
+        start_date: start,
+        end_date: end,
       }
-    })
+    });
+    councils.push(cc);
   }
 
+  // Phân công thành viên cho 5 hội đồng (mỗi HĐ 3 người: Chủ tịch, Thư ký, Phản biện)
+  const CM_Lecturers = [
+    [1001n, 1002n, 1003n], // HĐ 1
+    [1004n, 1005n, 1006n], // HĐ 2
+    [1007n, 1008n, 1009n], // HĐ 3
+    [1010n, 1011n, 1012n], // HĐ 4
+    [1013n, 1014n, 1015n], // HĐ 5
+  ];
 
-  console.log('✅ Seed dữ liệu thành công!');
+  for (let i = 0; i < 5; i++) {
+    const councilId = BigInt(i + 1);
+    const [cId, sId, rId] = CM_Lecturers[i];
+
+    await prisma.councilMember.create({
+      data: { council_id: councilId, lecturer_id: cId, position: CouncilPosition.CHAIRMAN }
+    });
+    await prisma.councilMember.create({
+      data: { council_id: councilId, lecturer_id: sId, position: CouncilPosition.SECRETARY }
+    });
+    await prisma.councilMember.create({
+      data: { council_id: councilId, lecturer_id: rId, position: CouncilPosition.REVIEWER }
+    });
+  }
+
+  // ==========================================
+  // 11. Tạo 45 Đồ án (Capstones) với các trạng thái phong phú
+  // ==========================================
+  // Chúng ta có 60 sinh viên (2351170001 -> 2351170060).
+  // Gán đồ án cho 45 sinh viên đầu tiên.
+  for (let i = 1; i <= 45; i++) {
+    const studentId = 2351170000n + BigInt(i);
+    let status: CapstoneStatus = CapstoneStatus.DOING;
+    let lecturerId: bigint | null = 1000n + BigInt((i % 15) + 1); // GV hướng dẫn xoay vòng
+    let topicId: bigint | null = BigInt(i);
+
+    const targetLecId = lecturerId;
+    const targetTopicId = topicId;
+
+    // Phân bổ trạng thái đồ án sinh động:
+    if (i <= 5) {
+      status = CapstoneStatus.PENDING_LECTURER; // Đang chờ GV duyệt đăng ký
+      lecturerId = null;
+      topicId = null;
+    } else if (i <= 8) {
+      status = CapstoneStatus.PENDING_FACULTY; // Đang chờ Khoa duyệt đề tài SV đề xuất
+      topicId = null;
+    } else if (i <= 20) {
+      status = CapstoneStatus.DOING; // Đang thực hiện bình thường
+    } else if (i <= 32) {
+      status = CapstoneStatus.DEFENSE_ELIGIBLE; // Đủ điều kiện ra hội đồng bảo vệ
+    } else if (i <= 42) {
+      status = CapstoneStatus.COMPLETED; // Đã bảo vệ thành công
+    } else if (i === 43 || i === 44) {
+      status = CapstoneStatus.FAILED; // Bị trượt
+    } else {
+      status = CapstoneStatus.CANCEL; // Đã hủy
+    }
+
+    // Set điểm số cho các trạng thái phù hợp
+    let instructorGrade: number | null = null;
+    let councilGrade: number | null = null;
+    let councilId: bigint | null = null;
+
+    if (status === CapstoneStatus.DEFENSE_ELIGIBLE) {
+      instructorGrade = 8.0 + (i % 3) * 0.5; // Điểm GVHD chấm từ 8.0 -> 9.0
+    } else if (status === CapstoneStatus.COMPLETED) {
+      instructorGrade = 8.5;
+      councilGrade = 8.0 + (i % 3) * 0.5;
+      councilId = BigInt((i % 5) + 1); // Gán vào 1 trong 5 hội đồng bảo vệ
+    } else if (status === CapstoneStatus.FAILED) {
+      instructorGrade = 4.0;
+      councilGrade = 3.5;
+      councilId = 1n;
+    }
+
+    const cap = await prisma.capstone.create({
+      data: {
+        capstone_id: BigInt(i),
+        student_id: studentId,
+        topic_id: topicId,
+        lecturer_id: lecturerId,
+        semester_id: semester8.semester_id,
+        status: status,
+        faculty_id: 1000n,
+        instructor_grade: instructorGrade,
+        council_grade: councilGrade,
+        council_id: councilId,
+      }
+    });
+
+    // Tạo các yêu cầu đăng ký tương ứng (Requests) để hệ thống hiển thị lịch sử duyệt đề tài
+    if (status === CapstoneStatus.PENDING_LECTURER) {
+      await prisma.capstoneRequest.create({
+        data: {
+          capstone_id: cap.capstone_id,
+          sender_id: studentId,
+          request_type: 'REGISTER_LECTURER',
+          message: 'Em chào thầy/cô, em mong muốn được đăng ký thầy/cô hướng dẫn thực hiện đề tài tốt nghiệp này ạ.',
+          target_id: targetLecId,
+          status: RequestStatus.PENDING,
+        }
+      });
+    } else if (status === CapstoneStatus.PENDING_FACULTY) {
+      await prisma.capstoneRequest.create({
+        data: {
+          capstone_id: cap.capstone_id,
+          sender_id: studentId,
+          request_type: 'REGISTER_TOPIC',
+          message: 'Hồ sơ đề xuất đề tài tốt nghiệp tự chọn của sinh viên gửi Khoa phê duyệt.',
+          target_id: targetTopicId,
+          status: RequestStatus.PENDING,
+        }
+      });
+    }
+
+    // Tạo lịch sử nộp bài (Milestone Submissions) cho các Capstones đang thực hiện và đã hoàn thành
+    if (status === CapstoneStatus.DOING || status === CapstoneStatus.DEFENSE_ELIGIBLE || status === CapstoneStatus.COMPLETED || status === CapstoneStatus.FAILED) {
+      // Mốc 1: Nộp đề cương sơ bộ -> Mọi người đều đã hoàn thành và đạt
+      await prisma.capstoneSubmission.create({
+        data: {
+          capstone_id: cap.capstone_id,
+          milestone_id: 1n,
+          file_path: `/uploads/submissions/de_cuong_sv_${i}.pdf`,
+          student_note: 'Bản nộp đề cương chi tiết giai đoạn 1',
+          grade: 8.5,
+          lecturer_note: 'Đề cương tốt, tiếp tục phát triển.',
+          status: SubmissionStatus.PASSED,
+        }
+      });
+
+      // Mốc 2: Báo cáo tiến độ lần 1 -> Đã hoàn thành và đạt
+      await prisma.capstoneSubmission.create({
+        data: {
+          capstone_id: cap.capstone_id,
+          milestone_id: 2n,
+          file_path: `/uploads/submissions/tien_do_1_sv_${i}.pdf`,
+          student_note: 'Nộp báo cáo tiến độ lần 1',
+          grade: 8.0,
+          lecturer_note: 'Đã hoàn thành đúng tiến độ.',
+          status: SubmissionStatus.PASSED,
+        }
+      });
+
+      // Mốc 3: Báo cáo tiến độ lần 2 -> Đã hoàn thành cho những capstones gần cuối
+      if (status === CapstoneStatus.DEFENSE_ELIGIBLE || status === CapstoneStatus.COMPLETED || status === CapstoneStatus.FAILED) {
+        await prisma.capstoneSubmission.create({
+          data: {
+            capstone_id: cap.capstone_id,
+            milestone_id: 3n,
+            file_path: `/uploads/submissions/tien_do_2_sv_${i}.pdf`,
+            student_note: 'Nộp báo cáo tiến độ lần 2',
+            grade: 8.0,
+            lecturer_note: 'Hoàn thành tốt phần Core chính của ứng dụng.',
+            status: SubmissionStatus.PASSED,
+          }
+        });
+      }
+
+      // Mốc 4: Báo cáo cuối kỳ -> Chỉ những capstones chuẩn bị hoặc đã bảo vệ mới nộp
+      if (status === CapstoneStatus.DEFENSE_ELIGIBLE || status === CapstoneStatus.COMPLETED || status === CapstoneStatus.FAILED) {
+        await prisma.capstoneSubmission.create({
+          data: {
+            capstone_id: cap.capstone_id,
+            milestone_id: 4n,
+            file_path: `/uploads/submissions/bao_cao_cuoi_ky_sv_${i}.zip`,
+            student_note: 'Em nộp báo cáo hoàn thiện kèm link github source code.',
+            grade: status === CapstoneStatus.FAILED ? 4.0 : 8.5,
+            lecturer_note: status === CapstoneStatus.FAILED ? 'Báo cáo sơ sài, thiếu nhiều chức năng lớn.' : 'Báo cáo đầy đủ, đạt yêu cầu để ra hội đồng bảo vệ.',
+            status: status === CapstoneStatus.FAILED ? SubmissionStatus.FAILED : SubmissionStatus.PASSED,
+          }
+        });
+      }
+    }
+
+    // Tạo phiếu chấm điểm Hội đồng (CouncilEvaluation) cho các đồ án đã bảo vệ xong
+    if ((status === CapstoneStatus.COMPLETED || status === CapstoneStatus.FAILED) && councilId) {
+      const evaluationLecturers = CM_Lecturers[Number(councilId) - 1]; // Lấy danh sách 3 giảng viên hội đồng
+      for (const evaluatorId of evaluationLecturers) {
+        const gradeOffset = (Number(evaluatorId) % 3) * 0.5;
+        await prisma.councilEvaluation.create({
+          data: {
+            council_id: councilId,
+            members_id: evaluatorId,
+            capstone_id: cap.capstone_id,
+            grade: status === CapstoneStatus.FAILED ? 3.5 : 8.0 + gradeOffset,
+            lecturer_note: status === CapstoneStatus.FAILED ? 'Đồ án không đạt chất lượng tối thiểu.' : 'Phần trình bày tự tin, trả lời tốt câu hỏi phản biện.',
+          }
+        });
+      }
+    }
+  }
+
+  console.log('✅ Seed dữ liệu phong phú thành công!');
 }
 
 main()

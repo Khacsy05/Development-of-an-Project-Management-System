@@ -2,29 +2,37 @@
 
 import React, { useEffect, useState } from 'react';
 import { updatedCapstone, uploadFile } from '@/services/capstone.service';
-import { getLecturerList, getLecturerById } from '@/services/lecturer.service';
+import { getUserById, getUserList } from '@/services/user.service';
 import { useCapstoneStore } from '@/store/useCapstoneStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from 'sonner';
 import { Lecturer } from '@/type/lecturer';
 
+import { useStudentStore } from '@/store/useStudentStore';
+
 export default function RegisterLecturerPage() {
     const { capstone, fetchCapstone, setCapstone } = useCapstoneStore();
-    const [lecturers, setLecturers] = useState<Lecturer[]>([]);
+    const {
+        lecturers,
+        lecturersTotalItems: totalItems,
+        lecturersTotalPages: totalPages,
+        fetchLecturers,
+        invalidateLecturersCache,
+    } = useStudentStore();
+
     const [searchQuery, setSearchQuery] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
+    // Khởi tạo là false nếu đã có sẵn dữ liệu trong bộ nhớ cache
+    const [isLoading, setIsLoading] = useState(!capstone || lecturers.length === 0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const userId = useAuthStore((state) => state.userId);
+    const isInitializing = useAuthStore((state) => state.isInitializing);
 
     // States cho Modal đăng ký
-    const [activeRegisterLecturer, setActiveRegisterLecturer] = useState<Lecturer | null>(null);
+    const [activeRegisterLecturer, setActiveRegisterLecturer] = useState<any | null>(null);
     const [message, setMessage] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-    // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalItems, setTotalItems] = useState(0);
     const limit = 6;
 
     const getPaginationRange = (current: number, total: number) => {
@@ -47,24 +55,20 @@ export default function RegisterLecturerPage() {
 
     const fetchLecturersData = async (page: number) => {
         try {
-            setIsLoading(true);
+            if (lecturers.length === 0) {
+                setIsLoading(true);
+            }
             const params: any = {
+                role: 'Lecturer',
                 page,
                 limit,
             };
             if (searchQuery.trim()) {
                 params.fullname = searchQuery.trim();
             }
-            const lecturersData = await getLecturerList(params);
-            setLecturers(lecturersData.data || []);
-            if (lecturersData.pagination) {
-                setCurrentPage(lecturersData.pagination.page);
-                setTotalPages(lecturersData.pagination.totalPages);
-                setTotalItems(lecturersData.pagination.total);
-            }
+            await fetchLecturers(params);
         } catch (error) {
             console.error('Lỗi khi tải danh sách giảng viên:', error);
-            toast.error('Không thể tải danh sách giảng viên');
         } finally {
             setIsLoading(false);
         }
@@ -72,15 +76,24 @@ export default function RegisterLecturerPage() {
 
     // Load capstone initially
     useEffect(() => {
-        if (userId) {
+        if (!isInitializing && userId) {
             fetchCapstone(userId);
         }
-    }, [userId]);
+    }, [userId, isInitializing]);
+
+    // Cuộn lên đầu trang khi thay đổi trang phân trang
+    useEffect(() => {
+        if (typeof document !== 'undefined') {
+            document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [currentPage]);
 
     // Load lecturers when page or search query changes
     useEffect(() => {
-        fetchLecturersData(currentPage);
-    }, [currentPage, searchQuery, userId]);
+        if (!isInitializing && userId) {
+            fetchLecturersData(currentPage);
+        }
+    }, [currentPage, searchQuery, userId, isInitializing]);
 
     const handleRegister = async (lecturerId: string, msg: string, file: File | null) => {
         if (!capstone?.capstone_id) {
@@ -128,7 +141,7 @@ export default function RegisterLecturerPage() {
         const fetchPendingLecturer = async () => {
             if (pendingLecturerRequest?.target_id) {
                 try {
-                    const data = await getLecturerById(pendingLecturerRequest.target_id);
+                    const data = await getUserById(pendingLecturerRequest.target_id);
                     setPendingLecturer(data);
                 } catch (e) {
                     console.error(e);
@@ -241,9 +254,8 @@ export default function RegisterLecturerPage() {
                                             return (
                                                 <tr
                                                     key={lecturer.user_id}
-                                                    className={`hover:bg-slate-50/50 transition-colors align-middle ${
-                                                        isSelected ? 'bg-blue-50/30' : isPending ? 'bg-amber-50/20' : ''
-                                                    }`}
+                                                    className={`hover:bg-slate-50/50 transition-colors align-middle ${isSelected ? 'bg-blue-50/30' : isPending ? 'bg-amber-50/20' : ''
+                                                        }`}
                                                 >
                                                     <td className="px-6 py-4 font-bold text-gray-900">{lecturer.usercode}</td>
                                                     <td className="px-6 py-4 font-bold text-gray-900">{lecturer.fullname}</td>
@@ -265,13 +277,12 @@ export default function RegisterLecturerPage() {
                                                                     setSelectedFile(null);
                                                                 }}
                                                                 disabled={isSubmitting || isSelected || isPending || hasConfirmedLecturer || capstone?.status === 'CANCEL_REQUESTED'}
-                                                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ${
-                                                                    isSelected
-                                                                        ? 'bg-blue-50 text-blue-600 border border-blue-200 cursor-default font-black'
-                                                                        : isPending
-                                                                            ? 'bg-amber-50 text-amber-600 border border-amber-200 cursor-default font-black'
-                                                                            : 'bg-[#2e7d32] hover:bg-[#205723] text-white disabled:bg-gray-200 disabled:text-gray-100 disabled:cursor-not-allowed'
-                                                                }`}
+                                                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ${isSelected
+                                                                    ? 'bg-blue-50 text-blue-600 border border-blue-200 cursor-default font-black'
+                                                                    : isPending
+                                                                        ? 'bg-amber-50 text-amber-600 border border-amber-200 cursor-default font-black'
+                                                                        : 'bg-[#2e7d32] hover:bg-[#205723] text-white disabled:bg-gray-200 disabled:text-gray-100 disabled:cursor-not-allowed'
+                                                                    }`}
                                                             >
                                                                 {isSelected ? 'GVHD hiện tại' : isPending ? 'Chờ duyệt' : 'Đăng ký'}
                                                             </button>
@@ -339,11 +350,10 @@ export default function RegisterLecturerPage() {
                                                     <button
                                                         key={pageNum}
                                                         onClick={() => setCurrentPage(pageNum)}
-                                                        className={`relative inline-flex items-center px-3 py-1.5 text-xs font-bold focus:z-20 ${
-                                                            currentPage === pageNum
-                                                                ? 'z-10 bg-blue-600 text-white ring-1 ring-blue-600 focus-visible:outline focus-visible:outline-2'
-                                                                : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
-                                                        }`}
+                                                        className={`relative inline-flex items-center px-3 py-1.5 text-xs font-bold focus:z-20 ${currentPage === pageNum
+                                                            ? 'z-10 bg-blue-600 text-white ring-1 ring-blue-600 focus-visible:outline focus-visible:outline-2'
+                                                            : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+                                                            }`}
                                                     >
                                                         {pageNum}
                                                     </button>

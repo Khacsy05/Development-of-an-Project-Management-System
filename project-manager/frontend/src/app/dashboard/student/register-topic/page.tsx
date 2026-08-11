@@ -8,23 +8,31 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from 'sonner';
 import { Topic } from '@/type/topic';
 
+import { useStudentStore } from '@/store/useStudentStore';
+
 export default function RegisterTopicPage() {
     const { capstone, fetchCapstone, setCapstone } = useCapstoneStore();
-    const [topics, setTopics] = useState<Topic[]>([]);
+    const {
+        topics,
+        topicsTotalItems: totalItems,
+        topicsTotalPages: totalPages,
+        fetchTopics,
+        invalidateTopicsCache,
+    } = useStudentStore();
+
+    const [currentPage, setCurrentPage] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
+    // Khởi tạo là false nếu đã có sẵn dữ liệu trong bộ nhớ cache
+    const [isLoading, setIsLoading] = useState(!capstone || topics.length === 0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const userId = useAuthStore((state) => state.userId);
+    const isInitializing = useAuthStore((state) => state.isInitializing);
 
     // States cho Modal đăng ký
     const [activeRegisterTopic, setActiveRegisterTopic] = useState<Topic | null>(null);
     const [message, setMessage] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-    // Pagination states
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalItems, setTotalItems] = useState(0);
     const limit = 6;
 
     const getPaginationRange = (current: number, total: number) => {
@@ -47,7 +55,9 @@ export default function RegisterTopicPage() {
 
     const fetchTopicsData = async (page: number) => {
         try {
-            setIsLoading(true);
+            if (topics.length === 0) {
+                setIsLoading(true);
+            }
             const params: any = {
                 isAvailable: 'true',
                 page,
@@ -56,16 +66,9 @@ export default function RegisterTopicPage() {
             if (searchQuery.trim()) {
                 params.title = searchQuery.trim();
             }
-            const topicsData = await getTopicList(params);
-            setTopics(topicsData.data || []);
-            if (topicsData.pagination) {
-                setCurrentPage(topicsData.pagination.page);
-                setTotalPages(topicsData.pagination.totalPages);
-                setTotalItems(topicsData.pagination.total);
-            }
+            await fetchTopics(params);
         } catch (error) {
             console.error('Lỗi khi tải dữ liệu đề tài:', error);
-            toast.error('Không thể tải danh sách đề tài');
         } finally {
             setIsLoading(false);
         }
@@ -73,15 +76,24 @@ export default function RegisterTopicPage() {
 
     // Load capstone initially
     useEffect(() => {
-        if (userId) {
+        if (!isInitializing && userId) {
             fetchCapstone(userId);
         }
-    }, [userId]);
+    }, [userId, isInitializing]);
+
+    // Cuộn lên đầu trang khi thay đổi trang phân trang
+    useEffect(() => {
+        if (typeof document !== 'undefined') {
+            document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [currentPage]);
 
     // Load topics when page or query changes
     useEffect(() => {
-        fetchTopicsData(currentPage);
-    }, [currentPage, searchQuery, userId]);
+        if (!isInitializing && userId) {
+            fetchTopicsData(currentPage);
+        }
+    }, [currentPage, searchQuery, userId, isInitializing]);
 
     const handleRegister = async (topicId: string, msg: string, file: File | null) => {
         if (!capstone?.capstone_id) {

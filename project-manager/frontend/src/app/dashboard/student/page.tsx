@@ -8,13 +8,14 @@ import { toast } from 'sonner'
 
 const studentPage = () => {
     const userId = useAuthStore((state) => state.userId);
+    const isInitializing = useAuthStore((state) => state.isInitializing);
     const { capstone, isLoading, fetchCapstone, setCapstone } = useCapstoneStore();
 
     useEffect(() => {
-        if (userId) {
+        if (!isInitializing && userId) {
             fetchCapstone(userId);
         }
-    }, [userId, fetchCapstone]);
+    }, [userId, isInitializing, fetchCapstone]);
 
     const handleRegisterCapstone = async () => {
         try {
@@ -40,9 +41,9 @@ const studentPage = () => {
         }
     }
 
-    if (isLoading) {
+    if (isInitializing || (isLoading && !capstone)) {
         return (
-            <div className="flex items-center justify-center min-h-[150px] p-6">
+            <div className="flex items-center justify-center min-h-[300px] p-6">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
         );

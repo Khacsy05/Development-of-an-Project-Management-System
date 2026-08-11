@@ -4,16 +4,18 @@ import React, { useEffect, useState } from 'react';
 import { getCapstoneByUser, updateCapstoneSubmission } from '@/services/capstone.service';
 import { getMilestoneList } from '@/services/milestone.service';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useCapstoneStore } from '@/store/useCapstoneStore';
 import { toast } from 'sonner';
 import { Capstone, Submission } from '@/type/capstone';
 import { Milestone } from '@/type/milestone';
 
 
 export default function ReportPage() {
-  const [capstone, setCapstone] = useState<Capstone | null>(null);
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { capstone, fetchCapstone, milestones, fetchMilestones } = useCapstoneStore();
+  // Khởi tạo là false nếu đã có sẵn dữ liệu trong bộ nhớ cache
+  const [isLoading, setIsLoading] = useState(!capstone || milestones.length === 0);
   const userId = useAuthStore((state) => state.userId);
+  const isInitializing = useAuthStore((state) => state.isInitializing);
 
   // States cho modal nộp bài
   const [activeSubmitMilestone, setActiveSubmitMilestone] = useState<Milestone | null>(null);
@@ -29,16 +31,13 @@ export default function ReportPage() {
   const fetchData = async () => {
     if (!userId) return;
     try {
-      setIsLoading(true);
-      const capstoneData = await getCapstoneByUser(userId);
-      setCapstone(capstoneData);
-
-      const milestoneData = await getMilestoneList();
-      // Sắp xếp mốc thời gian tăng dần theo deadline
-      const sortedMilestones = (milestoneData || []).sort(
-        (a: Milestone, b: Milestone) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
-      );
-      setMilestones(sortedMilestones);
+      if (!capstone || milestones.length === 0) {
+        setIsLoading(true);
+      }
+      await Promise.all([
+        fetchCapstone(userId),
+        fetchMilestones()
+      ]);
     } catch (error) {
       console.error('Lỗi khi tải dữ liệu báo cáo:', error);
       toast.error('Không thể tải dữ liệu báo cáo');
@@ -48,8 +47,10 @@ export default function ReportPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [userId]);
+    if (!isInitializing && userId) {
+      fetchData();
+    }
+  }, [userId, isInitializing]);
 
   const formatDate = (dateStr: string | Date) => {
     if (!dateStr) return '---';

@@ -1,10 +1,11 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor() {
+  constructor(private prisma: PrismaService) {
     super({
       // 1. Tự động bóc tách Token từ Header "Authorization: Bearer <token>"
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -23,19 +24,24 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
    * @param payload Dữ liệu đã được giải mã từ bên trong Token (chứa id, email, role_id...)
    */
   async validate(payload: any) {
-    // Nếu token hợp lệ nhưng rỗng payload (trường hợp hy hữu)
     if (!payload) {
       throw new UnauthorizedException('Token không hợp lệ!');
     }
 
-    // 🌟 TRẢ VỀ THÔNG TIN USER:
-    // Bạn return dữ liệu gì ở đây, NestJS sẽ tự động đính dữ liệu đó vào "request.user".
-    // Nhờ vậy, RolesGuard chạy phía sau chỉ cần lấy "request.user.role_id" ra để so khớp.
+    // Kiểm tra trực tiếp trạng thái kích hoạt của người dùng trong DB
+    const user = await this.prisma.user.findUnique({
+      where: { user_id: BigInt(payload.id) }
+    });
+
+    if (!user || !user.is_active) {
+      throw new UnauthorizedException('Tài khoản đã bị vô hiệu hóa hoặc không tồn tại!');
+    }
+
     return {
-      id: payload.id,        // payload.sub thường là ID của user
+      id: payload.id,
       name: payload.name,
       email: payload.email,
-      role: payload.role, // Truyền role_id để khớp với DB của bạn
+      role: payload.role,
       faculty: payload.faculty_id,
       faculty_id: payload.faculty_id,
     };

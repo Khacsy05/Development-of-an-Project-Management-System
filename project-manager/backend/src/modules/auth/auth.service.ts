@@ -20,6 +20,9 @@ export class AuthService {
         if (!user) {
             throw new UnauthorizedException('Email hoặc mật khẩu không chính xác!');
         }
+        if (!user.is_active) {
+            throw new UnauthorizedException('Tài khoản đã bị vô hiệu hóa!');
+        }
 
         const faculty = await this.prisma.faculty.findUnique({
             where: { dean_id: user.user_id },
@@ -97,8 +100,8 @@ export class AuthService {
                 }
             });
 
-            if (!user) {
-                throw new UnauthorizedException('Người dùng không còn tồn tại');
+            if (!user || !user.is_active) {
+                throw new UnauthorizedException('Tài khoản đã bị vô hiệu hóa hoặc không tồn tại');
             }
             const faculty = await this.prisma.faculty.findUnique({
                 where: { dean_id: user.user_id },

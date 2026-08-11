@@ -10,3 +10,4 @@ export async function loginUser(data: DataLogin) {
         throw error;
     }
 }
+

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { getTopicList } from '@/services/topic.service';
 import { getCapstoneLists } from '@/services/capstone.service';
 import { getCouncilList } from '@/services/council.service';
-import { getLecturerList } from '@/services/lecturer.service';
+import { getLecturerList } from '@/services/user.service';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFacultyCacheStore } from '@/store/useFacultyCacheStore';
 import { toast } from 'sonner';

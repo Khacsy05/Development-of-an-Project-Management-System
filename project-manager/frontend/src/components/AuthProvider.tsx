@@ -5,7 +5,7 @@
 import apiClient from '@/lib/apiClient';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useEffect } from 'react';
-
+import { toast } from 'sonner';
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
     const setAuth = useAuthStore((state) => state.setAuth);
@@ -24,7 +24,24 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
                     setIsInitializing(false);
                 }
             } catch (error) {
-                // Refresh token hết hạn hoặc không tồn tại
+                // Gọi API logout để xóa cookie Refresh Token trên trình duyệt
+                try {
+                    await apiClient.post('/auth/logout');
+                } catch (logoutError) {
+                    console.error('Lỗi khi xóa cookie refresh token:', logoutError);
+                }
+
+                // Hiển thị thông báo tài khoản bị khóa/vô hiệu hóa (chỉ hiển thị nếu không ở trang login)
+                if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login') {
+                    toast.error('Tài khoản của bạn đã bị vô hiệu hóa hoặc phiên đăng nhập hết hạn!');
+                }
+
+                useAuthStore.getState().logout();
+                if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login') {
+                    // Delay 2.5 giây để người dùng kịp nhìn thấy thông báo trước khi bị chuyển trang
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                    window.location.href = '/auth/login';
+                }
                 setIsInitializing(false);
             }
         };

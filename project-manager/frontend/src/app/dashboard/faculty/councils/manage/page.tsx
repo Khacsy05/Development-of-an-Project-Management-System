@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { getCouncilList, createCouncil, updateCouncil, deleteCouncil, assignCouncilMembers, getCounciMember } from '@/services/council.service';
 import { getSemesterList } from '@/services/semester.service';
-import { getLecturerList } from '@/services/lecturer.service';
+import { getLecturerList } from '@/services/user.service';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFacultyCacheStore } from '@/store/useFacultyCacheStore';
 import { toast } from 'sonner';

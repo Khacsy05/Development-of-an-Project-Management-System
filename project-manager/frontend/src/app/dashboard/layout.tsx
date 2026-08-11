@@ -16,8 +16,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { clearCache } = useCacheStore();
   const { clearFacultyCache } = useFacultyCacheStore();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     // 1. Hiển thị Loading Toast lập tức để phản hồi người dùng
     const toastId = toast.loading('Đang đăng xuất...');
 
@@ -37,6 +39,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       window.location.href = '/auth/login';
     }
   };
+
+  if (isLoggingOut) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 text-gray-800">
+        <Toaster richColors position="top-right" />
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+        <p className="text-sm font-semibold text-gray-600">Đang đăng xuất khỏi hệ thống...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 text-gray-800 overflow-hidden relative">

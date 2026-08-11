@@ -39,25 +39,25 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
 
-      if (userRole == "Student" && pathname.startsWith('/dashboard/lecturer')) {
+      if (userRole === "Student" && pathname.startsWith('/dashboard/lecturer')) {
         return NextResponse.redirect(new URL('/dashboard/student', request.url))
       }
-      if (userRole == "Student" && pathname.startsWith('/dashboard/admin')) {
+      if (userRole === "Student" && pathname.startsWith('/dashboard/admin')) {
         return NextResponse.redirect(new URL('/dashboard/student', request.url))
       }
       // Giảng viên không được vào phân vùng của Sinh viên
-      if (userRole == "Lecturer" && pathname.startsWith('/dashboard/student')) {
+      if (userRole === "Lecturer" && pathname.startsWith('/dashboard/student')) {
         return NextResponse.redirect(new URL('/dashboard/lecturer', request.url))
       }
-      if (userRole == "Lecturer" && pathname.startsWith('/dashboard/admin')) {
-        return NextResponse.redirect(new URL('/dashboard/lecturer', request.url))
+      if (userRole === "Admin" && pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/admin')) {
+        return NextResponse.redirect(new URL('/dashboard/admin', request.url))
       }
 
-      if (userRole == "Student" && pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/student')) {
+      if (userRole === "Student" && pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/student')) {
         const subPath = pathname.substring('/dashboard'.length);
         return NextResponse.redirect(new URL(`/dashboard/student${subPath}`, request.url))
       }
-      if (userRole == "Lecturer" && pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/lecturer') && !pathname.startsWith('/dashboard/faculty')) {
+      if (userRole === "Lecturer" && pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/lecturer') && !pathname.startsWith('/dashboard/faculty')) {
         const subPath = pathname.substring('/dashboard'.length);
         return NextResponse.redirect(new URL(`/dashboard/lecturer${subPath}`, request.url))
       }

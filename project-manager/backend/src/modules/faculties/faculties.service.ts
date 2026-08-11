@@ -36,6 +36,14 @@ export class FacultiesService {
     });
   }
 
+  async findMajors(facultyId: number) {
+    return await this.prisma.major.findMany({
+      where: {
+        faculty_id: BigInt(facultyId),
+      },
+    });
+  }
+
   update(id: number, updateFacultyDto: UpdateFacultyDto) {
     return `This action updates a #${id} faculty`;
   }

@@ -100,7 +100,7 @@ export default function AccountManagementPage() {
         try {
             const [facsRes, classesRes] = await Promise.all([
                 getFacultyList(),
-                getClassList(100),
+                getClassList({ limit: 1000 }), // Lấy tất cả lớp học để tự động lọc trên client
             ]);
             setFaculties(facsRes || []);
             setClasses(classesRes.data || []);
@@ -580,7 +580,7 @@ export default function AccountManagementPage() {
                                     <label className="block text-xs text-gray-500 font-bold mb-1">Khoa trực thuộc</label>
                                     <select
                                         value={formData.faculty_id}
-                                        onChange={(e) => setFormData({ ...formData, faculty_id: e.target.value })}
+                                        onChange={(e) => setFormData({ ...formData, faculty_id: e.target.value, class_id: '' })}
                                         className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-xs outline-none bg-white"
                                     >
                                         <option value="">-- Chọn khoa --</option>
@@ -601,9 +601,11 @@ export default function AccountManagementPage() {
                                         className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-xs outline-none bg-white"
                                     >
                                         <option value="">-- Chọn lớp học --</option>
-                                        {classes.map((c) => (
-                                            <option key={c.class_id} value={c.class_id}>{c.class_name}</option>
-                                        ))}
+                                        {classes
+                                            .filter((c) => !formData.faculty_id || String(c.faculty_id) === String(formData.faculty_id))
+                                            .map((c) => (
+                                                <option key={c.class_id} value={c.class_id}>{c.class_name}</option>
+                                            ))}
                                     </select>
                                 </div>
                             )}
@@ -727,7 +729,7 @@ export default function AccountManagementPage() {
                                         <label className="block text-xs text-gray-500 font-bold mb-1">Khoa trực thuộc</label>
                                         <select
                                             value={formData.faculty_id}
-                                            onChange={(e) => setFormData({ ...formData, faculty_id: e.target.value })}
+                                            onChange={(e) => setFormData({ ...formData, faculty_id: e.target.value, class_id: '' })}
                                             className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-xs outline-none bg-white"
                                         >
                                             <option value="">-- Chọn khoa --</option>
@@ -749,9 +751,11 @@ export default function AccountManagementPage() {
                                         className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-xs outline-none bg-white"
                                     >
                                         <option value="">-- Chọn lớp học --</option>
-                                        {classes.map((c) => (
-                                            <option key={c.class_id} value={c.class_id}>{c.class_name}</option>
-                                        ))}
+                                        {classes
+                                            .filter((c) => !formData.faculty_id || String(c.faculty_id) === String(formData.faculty_id))
+                                            .map((c) => (
+                                                <option key={c.class_id} value={c.class_id}>{c.class_name}</option>
+                                            ))}
                                     </select>
                                 </div>
                             )}

@@ -51,6 +51,7 @@ export interface UserQuery {
     fullname?: string;
     page?: number;
     limit?: number;
+    faculty_id?: number;
 }
 
 export interface UserResponse {

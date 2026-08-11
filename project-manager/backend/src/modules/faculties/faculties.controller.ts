@@ -22,6 +22,11 @@ export class FacultiesController {
     return this.facultiesService.findOne(+id);
   }
 
+  @Get(':id/majors')
+  findMajors(@Param('id') id: string) {
+    return this.facultiesService.findMajors(+id);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateFacultyDto: UpdateFacultyDto) {
     return this.facultiesService.update(+id, updateFacultyDto);

@@ -67,7 +67,7 @@ export class UsersService {
   }
 
   async findAll(query: UserQueryDto) {
-    const { role, fullname, page = 1, limit = 7 } = query;
+    const { role, fullname, page = 1, limit = 7, faculty_id } = query;
     const pageNumber = Math.max(1, Number(page) || 1);
     const limitNumber = Math.max(1, Number(limit) || 7);
     const normalizedFullname = fullname?.trim();
@@ -77,6 +77,10 @@ export class UsersService {
     const where: any = {
       role_id: roleId ? BigInt(roleId) : { in: [BigInt(2), BigInt(3)] },
     };
+
+    if (faculty_id) {
+      where.faculty_id = BigInt(faculty_id);
+    }
 
     if (normalizedFullname) {
       where.OR = [

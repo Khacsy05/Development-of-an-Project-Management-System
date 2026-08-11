@@ -7,4 +7,6 @@ export class UserQueryDto{
     page? :number;
     @Type(() => Number)
     limit? : number;
+    @Type(() => Number)
+    faculty_id? : number;
 }

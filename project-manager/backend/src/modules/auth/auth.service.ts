@@ -4,6 +4,7 @@ import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcryptjs';
 import jwt from "jsonwebtoken"
 import * as Express from 'express';
+import { UpdatePasswordDto } from './dto/updatePass.dto';
 @Injectable()
 export class AuthService {
     constructor(private prisma: PrismaService) { }
@@ -42,6 +43,7 @@ export class AuthService {
                 role: user.role.role_name,
                 isDean: !!user.managed_faculty,
                 faculty_id: faculty?.faculty_id,
+                username: user.username,
             },
             process.env.JWT_ACCESS_SECRET || "ACCESS_SECRET_KEY",
             { expiresIn: "15m" }
@@ -55,6 +57,7 @@ export class AuthService {
                 role: user.role.role_name,
                 isDean: !!user.managed_faculty,
                 faculty_id: faculty?.faculty_id,
+                username: user.username,
             },
             process.env.JWT_REFRESH_SECRET || "REFRESH_SECRET_KEY",
             { expiresIn: "7d" }
@@ -79,6 +82,7 @@ export class AuthService {
                 role: user.role.role_name,
                 isDean: !!user.managed_faculty,
             },
+            firstLogin: user.first_login,
         };
     }
     async refreshTokens(request: Express.Request, response: Express.Response) {
@@ -116,6 +120,7 @@ export class AuthService {
                     role: user.role.role_name,
                     isDean: !!user.managed_faculty,
                     faculty_id: faculty?.faculty_id,
+                    username: user.username,
                 },
                 process.env.JWT_ACCESS_SECRET || 'ACCESS_SECRET_KEY',
                 { expiresIn: '15m' }
@@ -129,6 +134,7 @@ export class AuthService {
                     role: user.role.role_name,
                     isDean: !!user.managed_faculty,
                     faculty_id: faculty?.faculty_id,
+                    username: user.username,
                 },
                 process.env.JWT_REFRESH_SECRET || 'REFRESH_SECRET_KEY',
                 { expiresIn: '7d' }
@@ -148,6 +154,33 @@ export class AuthService {
         } catch (error) {
             // ❌ Nếu token bị sai chữ ký hoặc HẾT HẠN (expired), jwt.verify sẽ văng lỗi vào đây
             throw new UnauthorizedException('Refresh Token không hợp lệ hoặc đã hết hạn');
+        }
+    }
+    async updatePassword(updatePasswordDto: UpdatePasswordDto) {
+        const { username, oldPassword, newPassword, confirmPassword } = updatePasswordDto;
+        if (newPassword !== confirmPassword) {
+            throw new UnauthorizedException('Mật khẩu không khớp');
+        }
+        const user = await this.prisma.user.findUnique({
+            where: { username: username },
+        })
+        if (!user) {
+            throw new UnauthorizedException('Username không tồn tại');
+        }
+        const isPasswordMatched = await bcrypt.compare(oldPassword, user.password);
+        if (!isPasswordMatched) {
+            throw new UnauthorizedException('Mật khẩu cũ không chính xác');
+        }
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await this.prisma.user.update({
+            where: { username: username },
+            data: {
+                password: hashedPassword,
+                first_login: false
+            },
+        })
+        return {
+            message: 'Cập nhật mật khẩu thành công',
         }
     }
 }

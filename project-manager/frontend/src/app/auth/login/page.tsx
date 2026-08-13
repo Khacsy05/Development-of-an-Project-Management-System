@@ -3,10 +3,14 @@ import React, { useState } from 'react'
 import { loginUser } from '@/services/auth.service';
 import { toast } from 'sonner'; // Sử dụng thư viện toast có sẵn trong project của em
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuthStore } from '@/store/useAuthStore';
+
 const Login = () => { // 🌟 Sửa tên component viết hoa chữ cái đầu
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false); // 🌟 Thêm loading state chống spam click
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const setIsFirstLogin = useAuthStore((state) => state.setIsFirstLogin);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -24,7 +28,13 @@ const Login = () => { // 🌟 Sửa tên component viết hoa chữ cái đầu
     setIsLoading(true);
     try {
       const res = await loginUser({ username, password });
-      console.log(res.data);
+
+      // Đắp Access Token vào Zustand RAM lập tức để cập nhật trạng thái đăng nhập
+      const isFirst = res.data?.firstLogin;
+      if (res.data?.accessToken) {
+        setAuth(res.data.accessToken);
+        setIsFirstLogin(isFirst);
+      }
 
       toast.success('Đăng nhập thành công! Đang chuyển hướng...');
 
@@ -34,7 +44,7 @@ const Login = () => { // 🌟 Sửa tên component viết hoa chữ cái đầu
 
       // Chuyển hướng sau một khoảng trễ ngắn để người dùng kịp nhìn thấy Toast thành công
       setTimeout(() => {
-        window.location.href = safeCallbackUrl;
+        router.push(safeCallbackUrl);
       }, 500);
     } catch (error: any) {
       // Lấy thông báo lỗi chi tiết từ backend nếu có

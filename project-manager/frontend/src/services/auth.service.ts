@@ -1,5 +1,5 @@
 import apiClient from "@/lib/apiClient";
-import { DataLogin } from "@/type/auth";
+import { DataLogin, UpdatePassword } from "@/type/auth";
 
 export async function loginUser(data: DataLogin) {
     try {
@@ -11,3 +11,13 @@ export async function loginUser(data: DataLogin) {
     }
 }
 
+
+export async function updatePassword(data: UpdatePassword) {
+    try {
+        const update = await apiClient.patch('/auth/updatePassword', data)
+        return update
+    } catch (error) {
+        console.error('Lỗi khi cap nhat mat khau:', error);
+        throw error;
+    }
+}   

@@ -9,6 +9,7 @@ interface JwtPayload {
     isDean: boolean;
     exp: number;
     faculty_id: string | null;
+    username: string;
 }
 
 interface AuthStore {
@@ -19,9 +20,11 @@ interface AuthStore {
     sidebarMode: 'lecturer' | 'dean';
     userName: string | null;
     userEmail: string | null;
+    username: string | null;
     isInitializing: boolean;
     faculty_id: string | null;
-
+    isFirstLogin: boolean | null;
+    setIsFirstLogin: (isFirstLogin: boolean) => void;
     setAuth: (accessToken: string) => void;
     logout: () => void;
     setIsInitializing: (status: boolean) => void;
@@ -36,8 +39,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
     sidebarMode: 'lecturer',
     userName: null,
     userEmail: null,
+    username: null,
     isInitializing: true,
     faculty_id: null,
+    isFirstLogin: null,
     setAuth: (accessToken: string) => {
         try {
             const decoded = jwtDecode<JwtPayload>(accessToken);
@@ -50,6 +55,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
                 sidebarMode: state.sidebarMode || 'lecturer',
                 userName: decoded.name,
                 userEmail: decoded.email,
+                username: decoded.username,
                 faculty_id: decoded.faculty_id,
                 isInitializing: false,
             }));
@@ -66,9 +72,13 @@ export const useAuthStore = create<AuthStore>((set) => ({
         sidebarMode: 'lecturer',
         userName: null,
         userEmail: null,
+        username: null,
+        faculty_id: null,
         isInitializing: false,
+        isFirstLogin: null,
     }),
 
     setIsInitializing: (status: boolean) => set({ isInitializing: status }),
-    setSidebarMode: (mode: 'lecturer' | 'dean') => set({ sidebarMode: mode })
+    setSidebarMode: (mode: 'lecturer' | 'dean') => set({ sidebarMode: mode }),
+    setIsFirstLogin: (isFirstLogin: boolean) => set({ isFirstLogin: isFirstLogin }),
 }))

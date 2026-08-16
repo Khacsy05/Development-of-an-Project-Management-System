@@ -29,6 +29,7 @@ interface AuthStore {
     logout: () => void;
     setIsInitializing: (status: boolean) => void;
     setSidebarMode: (mode: 'lecturer' | 'dean') => void;
+    updateUserDetail: (name: string, email: string) => void;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
@@ -81,4 +82,5 @@ export const useAuthStore = create<AuthStore>((set) => ({
     setIsInitializing: (status: boolean) => set({ isInitializing: status }),
     setSidebarMode: (mode: 'lecturer' | 'dean') => set({ sidebarMode: mode }),
     setIsFirstLogin: (isFirstLogin: boolean) => set({ isFirstLogin: isFirstLogin }),
+    updateUserDetail: (name: string, email: string) => set({ userName: name, userEmail: email }),
 }))

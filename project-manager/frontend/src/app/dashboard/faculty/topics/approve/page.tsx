@@ -13,7 +13,7 @@ export default function TopicsApprovePage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
-    const limit = 3;
+    const limit = 5;
 
     // State cho Modal chi tiết
     const [selectedRequest, setSelectedRequest] = useState<GetCapstoneRequestDto | null>(null);
@@ -280,12 +280,12 @@ export default function TopicsApprovePage() {
                                             <svg className="w-5 h-5 text-blue-600 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                             </svg>
-                                            <a 
-                                                href={selectedRequest.file_path.startsWith('http') 
-                                                    ? selectedRequest.file_path 
+                                            <a
+                                                href={selectedRequest.file_path.startsWith('http')
+                                                    ? selectedRequest.file_path
                                                     : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace('/api', '') + selectedRequest.file_path
                                                 }
-                                                target="_blank" 
+                                                target="_blank"
                                                 rel="noreferrer"
                                                 className="text-xs font-bold text-blue-600 hover:text-blue-800 underline truncate"
                                             >

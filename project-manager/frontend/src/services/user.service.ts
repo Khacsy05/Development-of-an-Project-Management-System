@@ -46,3 +46,13 @@ export async function updateUser(id: string, data: UserUpdatePayload) {
         throw error.response?.data || error;
     }
 }
+
+export async function updateUserProfile(data: Partial<UserUpdatePayload>) {
+    try {
+        const response = await apiClient.patch('/users/profile', data);
+        return response.data;
+    } catch (error: any) {
+        console.error('Lỗi khi cập nhật hồ sơ cá nhân:', error);
+        throw error.response?.data || error;
+    }
+}

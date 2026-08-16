@@ -1,11 +1,11 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, Suspense } from 'react'
 import { loginUser } from '@/services/auth.service';
 import { toast } from 'sonner'; // Sử dụng thư viện toast có sẵn trong project của em
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 
-const Login = () => { // 🌟 Sửa tên component viết hoa chữ cái đầu
+const LoginForm = () => { // 🌟 Đổi tên để chuẩn bị bọc Suspense
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false); // 🌟 Thêm loading state chống spam click
@@ -54,6 +54,46 @@ const Login = () => { // 🌟 Sửa tên component viết hoa chữ cái đầu
       setIsLoading(false);
     }
   }
+
+  const handleQuickLogin = async (roleName: 'admin' | 'lecturer' | 'student') => {
+    let targetUser = '';
+    const targetPass = 'password_da_ma_hoa_cho_nay';
+
+    if (roleName === 'admin') {
+      targetUser = 'admin';
+    } else if (roleName === 'lecturer') {
+      targetUser = 'gv_giangvien1';
+    } else {
+      targetUser = 'sv_sinhvien1';
+    }
+
+    setUsername(targetUser);
+    setPassword(targetPass);
+
+    setIsLoading(true);
+    const toastId = toast.loading('Đang tự động kết nối...');
+    try {
+      const res = await loginUser({ username: targetUser, password: targetPass });
+      const isFirst = res.data?.firstLogin;
+      if (res.data?.accessToken) {
+        setAuth(res.data.accessToken);
+        setIsFirstLogin(isFirst);
+      }
+
+      toast.success('Đăng nhập nhanh thành công!');
+      const rawCallback = searchParams.get('callbackUrl');
+      const safeCallbackUrl = getSafeCallbackUrl(rawCallback, '/dashboard');
+      setTimeout(() => {
+        router.push(safeCallbackUrl);
+      }, 500);
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.message || 'Đăng nhập nhanh thất bại!';
+      toast.error(errorMsg);
+    } finally {
+      toast.dismiss(toastId);
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => { // 🌟 Định nghĩa chuẩn type cho Event
     e.preventDefault();
@@ -129,7 +169,7 @@ const Login = () => { // 🌟 Sửa tên component viết hoa chữ cái đầu
           <button
             type="submit"
             disabled={isLoading} // Tránh spam click
-            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white shadow-md transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:bg-blue-400 flex items-center justify-center"
+            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white shadow-md transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:bg-blue-400 flex items-center justify-center cursor-pointer"
           >
             {isLoading ? (
               <>
@@ -142,9 +182,86 @@ const Login = () => { // 🌟 Sửa tên component viết hoa chữ cái đầu
             ) : 'Đăng nhập'}
           </button>
         </form>
+
+        {/* Quick Login Section */}
+        <div className="mt-8 border-t border-gray-100 pt-6">
+          <div className="text-center mb-4">
+            <span className="bg-white px-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
+              Đăng nhập nhanh cho nhà tuyển dụng
+            </span>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('admin')}
+              disabled={isLoading}
+              className="w-full flex items-center justify-between px-4 py-3 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-3">
+                <span className="p-2 bg-red-500 text-white rounded-lg group-hover:scale-105 transition-transform text-xs font-black">AD</span>
+                <div className="text-left">
+                  <p className="text-xs font-bold text-red-900">Quản trị viên (Admin)</p>
+                  <p className="text-[10px] text-red-500 font-semibold">Tài khoản quản trị tối cao</p>
+                </div>
+              </div>
+              <svg className="w-4 h-4 text-red-400 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('lecturer')}
+              disabled={isLoading}
+              className="w-full flex items-center justify-between px-4 py-3 bg-teal-50 hover:bg-teal-100 border border-teal-100 rounded-xl transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-3">
+                <span className="p-2 bg-teal-600 text-white rounded-lg group-hover:scale-105 transition-transform text-xs font-black">GV</span>
+                <div className="text-left">
+                  <p className="text-xs font-bold text-teal-900">Trưởng khoa / Giảng viên</p>
+                  <p className="text-[10px] text-teal-500 font-semibold">GV001 - Trưởng khoa CNTT</p>
+                </div>
+              </div>
+              <svg className="w-4 h-4 text-teal-400 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('student')}
+              disabled={isLoading}
+              className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-3">
+                <span className="p-2 bg-blue-600 text-white rounded-lg group-hover:scale-105 transition-transform text-xs font-black">SV</span>
+                <div className="text-left">
+                  <p className="text-xs font-bold text-blue-900">Sinh viên</p>
+                  <p className="text-[10px] text-blue-500 font-semibold">SV001 - Sinh viên làm đồ án</p>
+                </div>
+              </div>
+              <svg className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-export default Login // 🌟 Export component đã viết hoa
+export default function Login() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
+        <div className="text-sm font-semibold text-gray-600 flex flex-col items-center gap-2">
+          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          Đang tải trang đăng nhập...
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
+  );
+}

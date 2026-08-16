@@ -48,7 +48,7 @@ apiClient.interceptors.response.use(
                 originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
                 return apiClient(originalRequest);
 
-            } catch (refreshError) {
+            } catch (refreshError: any) {
                 // Gọi API logout để xóa Cookie HTTP-only "refreshToken" ở trình duyệt
                 try {
                     await axios.post(
@@ -62,7 +62,11 @@ apiClient.interceptors.response.use(
 
                 // Chỉ hiển thị thông báo nếu người dùng vẫn đang đăng nhập (không phải chủ động logout)
                 if (useAuthStore.getState().accessToken) {
-                    toast.error('Tài khoản của bạn đã bị vô hiệu hóa hoặc phiên đăng nhập hết hạn!');
+                    if (!refreshError.response) {
+                        toast.error('Không thể kết nối tới Máy chủ. Vui lòng kiểm tra lại trạng thái Backend!');
+                    } else {
+                        toast.error('Tài khoản của bạn đã bị vô hiệu hóa hoặc phiên đăng nhập hết hạn!');
+                    }
                 }
 
                 // Nếu Refresh Token cũng hết hạn -> Logout người dùng

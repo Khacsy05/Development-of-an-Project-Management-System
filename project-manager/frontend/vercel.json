@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://link-render-backend-cua-ban.onrender.com/api/:path*"
+      "destination": "https://development-of-an-project-management.onrender.com/api/:path*"
     }
   ]
 }

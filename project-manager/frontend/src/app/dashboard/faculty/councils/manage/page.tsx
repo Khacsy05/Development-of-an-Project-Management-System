@@ -11,11 +11,15 @@ import { toast } from 'sonner';
 export default function FacultyCouncilsManagePage() {
     const facultyId = useAuthStore((state) => state.faculty_id);
     const isInitializing = useAuthStore((state) => state.isInitializing);
-    const { councilsList, setCouncilsList } = useFacultyCacheStore();
+    const { councilsCache, setCouncilsCache, clearCouncilsCache } = useFacultyCacheStore();
 
     const [councils, setCouncils] = useState<any[]>([]);
     const [semesters, setSemesters] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(!councilsList);
+    const [isLoading, setIsLoading] = useState(!councilsCache.has('1'));
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const limit = 4;
 
     // Modal UI states
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -40,19 +44,30 @@ export default function FacultyCouncilsManagePage() {
     const [formStartDate, setFormStartDate] = useState('');
     const [formEndDate, setFormEndDate] = useState('');
 
-    const fetchCouncils = async () => {
+    const fetchCouncils = async (page: number) => {
         if (!facultyId) return;
-        if (councilsList) {
-            setCouncils(councilsList);
+        const cacheKey = String(page);
+        if (councilsCache.has(cacheKey)) {
+            const cached = councilsCache.get(cacheKey)!;
+            setCouncils(cached.data || []);
+            setCurrentPage(cached.pagination.page);
+            setTotalPages(cached.pagination.totalPages);
+            setTotalItems(cached.pagination.total);
             setIsLoading(false);
-        } else {
-            setIsLoading(true);
+            return;
         }
+
+        setIsLoading(true);
         try {
-            const data = await getCouncilList();
-            const list = Array.isArray(data) ? data : (data?.data || []);
-            setCouncils(list);
-            setCouncilsList(list);
+            const res = await getCouncilList({
+                page,
+                limit
+            });
+            setCouncils(res.data || []);
+            setCurrentPage(res.pagination.page);
+            setTotalPages(res.pagination.totalPages);
+            setTotalItems(res.pagination.total);
+            setCouncilsCache(cacheKey, res); // Cập nhật cache
         } catch (error: any) {
             console.error('Lỗi khi tải danh sách hội đồng:', error);
             toast.error('Không thể tải danh sách hội đồng.');
@@ -81,11 +96,11 @@ export default function FacultyCouncilsManagePage() {
 
     useEffect(() => {
         if (!isInitializing && facultyId) {
-            fetchCouncils();
+            fetchCouncils(currentPage);
             fetchSemesters();
             fetchLecturers();
         }
-    }, [facultyId, isInitializing]);
+    }, [facultyId, isInitializing, currentPage]);
 
     // Helpers to format datetime string for datetime-local input (YYYY-MM-DDTHH:MM)
     const formatToDatetimeLocal = (dateStr: string) => {
@@ -146,8 +161,8 @@ export default function FacultyCouncilsManagePage() {
             });
             toast.success('Thêm hội đồng mới thành công!');
             setIsCreateOpen(false);
-            setCouncilsList(null);
-            fetchCouncils();
+            clearCouncilsCache();
+            fetchCouncils(1);
         } catch (error: any) {
             console.error('Lỗi khi tạo hội đồng:', error);
             toast.error(typeof error === 'string' ? error : 'Không thể tạo hội đồng mới.');
@@ -168,8 +183,8 @@ export default function FacultyCouncilsManagePage() {
             });
             toast.success('Cập nhật hội đồng thành công!');
             setIsEditOpen(false);
-            setCouncilsList(null);
-            fetchCouncils();
+            clearCouncilsCache();
+            fetchCouncils(currentPage);
         } catch (error: any) {
             console.error('Lỗi khi cập nhật hội đồng:', error);
             toast.error(typeof error === 'string' ? error : 'Không thể cập nhật hội đồng.');
@@ -182,8 +197,8 @@ export default function FacultyCouncilsManagePage() {
             await deleteCouncil(selectedCouncil.council_id);
             toast.success('Xóa hội đồng thành công!');
             setIsDeleteOpen(false);
-            setCouncilsList(null);
-            fetchCouncils();
+            clearCouncilsCache();
+            fetchCouncils(currentPage);
         } catch (error: any) {
             console.error('Lỗi khi xóa hội đồng:', error);
             toast.error(typeof error === 'string' ? error : 'Không thể xóa hội đồng.');
@@ -247,8 +262,8 @@ export default function FacultyCouncilsManagePage() {
             });
             toast.success('Phân công thành viên hội đồng thành công!');
             setIsAssignOpen(false);
-            setCouncilsList(null);
-            fetchCouncils();
+            clearCouncilsCache();
+            fetchCouncils(currentPage);
         } catch (error: any) {
             console.error('Lỗi khi phân công thành viên:', error);
             toast.error(typeof error === 'string' ? error : 'Không thể phân công thành viên.');
@@ -361,6 +376,42 @@ export default function FacultyCouncilsManagePage() {
                             </tbody>
                         </table>
                     </div>
+                    {/* Pagination */}
+                    {totalItems > 0 && (
+                        <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+                            <div className="text-gray-400 font-semibold text-xs">
+                                Hiển thị {(currentPage - 1) * limit + 1} - {Math.min(currentPage * limit, totalItems)} trong tổng số {totalItems}
+                            </div>
+                            <nav className="inline-flex -space-x-px rounded-md shadow-sm">
+                                <button
+                                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="relative inline-flex items-center rounded-l-md px-3 py-1.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50 disabled:pointer-events-none text-xs"
+                                >
+                                    Trước
+                                </button>
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={`relative inline-flex items-center px-3 py-1.5 text-xs font-bold focus:z-20 ${currentPage === pageNum
+                                            ? 'z-10 bg-blue-600 text-white ring-1 ring-blue-600 focus-visible:outline focus-visible:outline-2 pointer-events-none'
+                                            : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="relative inline-flex items-center rounded-r-md px-3 py-1.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50 disabled:pointer-events-none text-xs"
+                                >
+                                    Sau
+                                </button>
+                            </nav>
+                        </div>
+                    )}
                 </div>
             )}
 

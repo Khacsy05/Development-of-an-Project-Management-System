@@ -14,9 +14,11 @@ export async function getCounciMember(data: GetCouncilMembersQueryDto) {
     }
 }
 
-export async function getCouncilList() {
+export async function getCouncilList(query?: any) {
     try {
-        const response = await apiClient.get('/councils');
+        const response = await apiClient.get('/councils', {
+            params: query
+        });
         console.log('Danh sách hội đồng:', response.data);
         return response.data;
     } catch (error) {

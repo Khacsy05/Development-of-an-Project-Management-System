@@ -144,16 +144,17 @@ export default function FacultyTopicsPage() {
         const cacheKey = `${page}_${searchTitle.trim()}_${isAvailableFilter}`;
 
         if (topicsCache.has(cacheKey)) {
-            // Nếu đã từng tải trang này, hiển thị ngay lập tức (0ms)
+            // Nếu đã từng tải trang này, hiển thị ngay lập tức (0ms) và không gọi API nữa
             const cached = topicsCache.get(cacheKey)!;
             setTopics(cached.topics);
             setCurrentPage(cached.pagination.page);
             setTotalPages(cached.pagination.totalPages);
             setTotalItems(cached.pagination.total);
             setIsLoading(false);
-        } else {
-            setIsLoading(true);
+            return;
         }
+
+        setIsLoading(true);
 
         try {
             const params: any = {

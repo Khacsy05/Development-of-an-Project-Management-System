@@ -70,7 +70,7 @@ model User {
 
   managed_faculty    Faculty?            @relation("FacultyDean")
 
-  first_login        Boolean             @default(true)
+  first_login        Boolean             @default(false)
   role_id            BigInt              @db.UnsignedBigInt
   role               Role                @relation(fields: [role_id], references: [role_id], onDelete: Restrict, onUpdate: Cascade)
   created_at         DateTime?           @default(now()) @db.Timestamp(0)

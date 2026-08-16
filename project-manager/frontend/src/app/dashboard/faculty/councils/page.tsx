@@ -11,26 +11,44 @@ import { toast } from 'sonner';
 const Page = () => {
     const faculty_id = useAuthStore((state) => state.faculty_id)
     const isInitializing = useAuthStore((state) => state.isInitializing)
-    const { councilsList, setCouncilsList, councilsAssignList, setCouncilsAssignList } = useFacultyCacheStore();
+    const { councilsAssignCache, setCouncilsAssignCache, clearCouncilsAssignCache } = useFacultyCacheStore();
 
     const [capstones, setCapstones] = useState<any[]>([])
     const [councils, setCouncils] = useState<any[]>([])
     const [selectedCapstone, setSelectedCapstone] = useState<any | null>(null)
-    const [isLoading, setIsLoading] = useState(!councilsAssignList || !councilsList)
+    const [isLoading, setIsLoading] = useState(!councilsAssignCache.has('1'))
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const limit = 5;
 
-    const fetchCapstones = async () => {
+    const fetchCapstones = async (page: number) => {
         if (!faculty_id) return
-        if (councilsAssignList) {
-            setCapstones(councilsAssignList);
+        const cacheKey = String(page);
+        if (councilsAssignCache.has(cacheKey)) {
+            const cached = councilsAssignCache.get(cacheKey)!;
+            setCapstones(cached.data || []);
+            setCurrentPage(cached.pagination.page);
+            setTotalPages(cached.pagination.totalPages);
+            setTotalItems(cached.pagination.total);
             setIsLoading(false);
-        } else {
-            setIsLoading(true);
+            return;
         }
+
+        setIsLoading(true);
         try {
-            const res = await getCapstoneLists({ faculty_id, status: CapstoneStatus.DEFENSE_ELIGIBLE })
-            const list = res.data || [];
-            setCapstones(list)
-            setCouncilsAssignList(list);
+            const res = await getCapstoneLists({ 
+                faculty_id, 
+                status: CapstoneStatus.DEFENSE_ELIGIBLE,
+                isUnassigned: 'true',
+                page,
+                limit
+            })
+            setCapstones(res.data || [])
+            setCurrentPage(res.pagination?.page || 1);
+            setTotalPages(res.pagination?.totalPages || 1);
+            setTotalItems(res.pagination?.total || 0);
+            setCouncilsAssignCache(cacheKey, res);
         } catch (error) {
             console.error(error)
             toast.error('Không thể tải danh sách đồ án.')
@@ -40,15 +58,10 @@ const Page = () => {
     }
 
     const fetchCouncils = async () => {
-        if (councilsList) {
-            setCouncils(councilsList);
-            return;
-        }
         try {
             const response = await getCouncilList()
             const list = response || [];
             setCouncils(list)
-            setCouncilsList(list);
         } catch (error) {
             console.error(error)
             toast.error('Không thể tải danh sách hội đồng.')
@@ -58,28 +71,28 @@ const Page = () => {
     useEffect(() => {
         if (!isInitializing) {
             if (faculty_id) {
-                fetchCapstones()
+                fetchCapstones(currentPage)
                 fetchCouncils()
             } else {
                 setIsLoading(false)
             }
         }
-    }, [faculty_id, isInitializing])
+    }, [faculty_id, isInitializing, currentPage])
 
     const handleAssignCouncil = async (capstoneId: string, councilId: string) => {
         try {
             await assignCouncil(capstoneId, councilId)
             toast.success('Phân công hội đồng bảo vệ thành công!')
             setSelectedCapstone(null)
-            setCouncilsAssignList(null);
-            fetchCapstones()
+            clearCouncilsAssignCache();
+            fetchCapstones(currentPage)
         } catch (error: any) {
             const backendMessage = error.response?.data?.message || 'Có lỗi xảy ra khi phân công hội đồng';
             toast.error(Array.isArray(backendMessage) ? backendMessage.join(', ') : backendMessage);
         }
     }
 
-    const unassignedCapstones = capstones.filter((capstone) => !capstone.council_id);
+    const unassignedCapstones = capstones;
 
     const getPositionBadgeClass = (pos: string) => {
         switch (pos?.toLowerCase()) {
@@ -189,6 +202,43 @@ const Page = () => {
                             </tbody>
                         </table>
                     </div>
+                    {/* Pagination */}
+                    {totalItems > 0 && (
+                        <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+                            <div className="text-gray-400 font-semibold text-xs">
+                                Hiển thị {(currentPage - 1) * limit + 1} - {Math.min(currentPage * limit, totalItems)} trong tổng số {totalItems}
+                            </div>
+                            <nav className="inline-flex -space-x-px rounded-md shadow-sm">
+                                <button
+                                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="relative inline-flex items-center rounded-l-md px-3 py-1.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50 disabled:pointer-events-none text-xs"
+                                >
+                                    Trước
+                                </button>
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={`relative inline-flex items-center px-3 py-1.5 text-xs font-bold focus:z-20 ${
+                                            currentPage === pageNum
+                                                ? 'z-10 bg-blue-600 text-white ring-1 ring-blue-600 focus-visible:outline focus-visible:outline-2 pointer-events-none'
+                                                : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="relative inline-flex items-center rounded-r-md px-3 py-1.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 disabled:opacity-50 disabled:pointer-events-none text-xs"
+                                >
+                                    Sau
+                                </button>
+                            </nav>
+                        </div>
+                    )}
                 </div>
             )}
 

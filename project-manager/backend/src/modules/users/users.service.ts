@@ -50,6 +50,7 @@ export class UsersService {
         phone_number,
         role_id: BigInt(role_id),
         faculty_id: faculty_id ? BigInt(faculty_id) : null,
+        first_login: true,
       }
     });
 

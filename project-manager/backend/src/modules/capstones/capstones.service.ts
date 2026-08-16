@@ -57,7 +57,7 @@ export class CapstonesService {
   }
 
   async findAll(query: CapstoneQuery) {
-    const { status, lecturer_id, faculty_id, page, limit } = query
+    const { status, lecturer_id, faculty_id, page, limit, isUnassigned } = query
     const pageNumber = Math.max(1, Number(page) || 1)
     const limitNumber = Math.max(1, Number(limit) || 6)
     const skip = (pageNumber - 1) * limitNumber
@@ -70,6 +70,9 @@ export class CapstonesService {
     }
     if (faculty_id) {
       where.faculty_id = BigInt(faculty_id)
+    }
+    if (isUnassigned === 'true') {
+      where.council_id = null;
     }
 
     const [capstone, total] = await this.prisma.$transaction([

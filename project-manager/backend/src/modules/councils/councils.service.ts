@@ -42,18 +42,62 @@ export class CouncilsService {
     const faculty_id = user?.faculty_id;
     const where: any = {}
     if (faculty_id) where.faculty_id = BigInt(faculty_id)
-    return await this.prisma.council.findMany({
-      where,
-      include: {
-        faculty: true,
-        members: {
-          include: {
-            lecturer: true
-          }
+    if (query.name) {
+      where.name = { contains: query.name }
+    }
+
+    if (!query.page) {
+      return await this.prisma.council.findMany({
+        where,
+        include: {
+          faculty: true,
+          members: {
+            include: {
+              lecturer: true
+            }
+          },
+          semester: true
         },
-        semester: true
+        orderBy: {
+          created_at: 'desc'
+        }
+      });
+    }
+
+    const page = parseInt(query.page);
+    const limit = query.limit ? parseInt(query.limit) : 10;
+    const skip = (page - 1) * limit;
+
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.council.count({ where }),
+      this.prisma.council.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          faculty: true,
+          members: {
+            include: {
+              lecturer: true
+            }
+          },
+          semester: true
+        },
+        orderBy: {
+          created_at: 'desc'
+        }
+      })
+    ]);
+
+    return {
+      data,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
       }
-    })
+    };
   }
 
   findOne(id: number) {

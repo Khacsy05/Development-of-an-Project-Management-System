@@ -38,7 +38,7 @@ async function main() {
   await prisma.studentProfile.deleteMany({});
   await prisma.class.deleteMany({});
   await prisma.major.deleteMany({});
-  
+
   // Set dean_id to null first to avoid circular reference on delete
   await prisma.faculty.updateMany({ data: { dean_id: null } });
   await prisma.user.deleteMany({});
@@ -154,6 +154,7 @@ async function main() {
         class_name: c.name,
         major_id: c.majorId,
         lecturer_id: c.lecturerId,
+        faculty_id: 1000n,
       }
     });
   }
@@ -208,8 +209,8 @@ async function main() {
       semester_id: 8n,
       year_id: year2526.year_id,
       semester_name: 'Học kỳ 8',
-      start_date: new Date('2026-02-01T00:00:00Z'),
-      end_date: new Date('2026-06-30T23:59:59Z'),
+      start_date: new Date('2027-02-01T00:00:00Z'),
+      end_date: new Date('2027-06-30T23:59:59Z'),
     }
   });
 

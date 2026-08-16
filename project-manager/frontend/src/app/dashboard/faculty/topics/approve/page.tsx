@@ -1,5 +1,6 @@
 'use client';
 
+import { useFacultyCacheStore } from '@/store/useFacultyCacheStore';
 import { getCapstoneRequest, updateCapstoneRequest } from '@/services/capstone.service';
 import { useAuthStore } from '@/store/useAuthStore';
 import { CapstoneRequestStatus } from '@/type/capstone';
@@ -8,11 +9,14 @@ import { toast } from 'sonner';
 import { GetCapstoneRequestDto } from '@/type/capstone';
 
 export default function TopicsApprovePage() {
-    const [capstoneRequests, setCapstoneRequests] = useState<GetCapstoneRequestDto[]>([]);
+    const { approveCache, setApproveCache, clearApproveCache } = useFacultyCacheStore();
     const userId = useAuthStore((state) => state.userId);
+
+    const [capstoneRequests, setCapstoneRequests] = useState<GetCapstoneRequestDto[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
+    const [isLoading, setIsLoading] = useState(!approveCache.has('1'));
     const limit = 5;
 
     // State cho Modal chi tiết
@@ -21,6 +25,19 @@ export default function TopicsApprovePage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const fetchCapstoneRequest = async (page: number) => {
+        const cacheKey = String(page);
+        if (approveCache.has(cacheKey)) {
+            const cached = approveCache.get(cacheKey)!;
+            setCapstoneRequests(cached.data);
+            setCurrentPage(cached.pagination.page);
+            setTotalPages(cached.pagination.totalPages);
+            setTotalItems(cached.pagination.total);
+            setIsLoading(false);
+            return;
+        }
+
+        setIsLoading(true);
+
         try {
             const result = await getCapstoneRequest({
                 status: CapstoneRequestStatus.PENDING,
@@ -33,8 +50,11 @@ export default function TopicsApprovePage() {
             setCurrentPage(result.pagination.page);
             setTotalPages(result.pagination.totalPages);
             setTotalItems(result.pagination.total);
+            setApproveCache(cacheKey, result); // Cập nhật cache
         } catch (error) {
             console.error("Lỗi khi tải dữ liệu yêu cầu:", error);
+        } finally {
+            setIsLoading(false);
         }
     }
 
@@ -54,6 +74,7 @@ export default function TopicsApprovePage() {
             toast.success("Yêu cầu duyệt đề tài đã được chấp nhận");
             setSelectedRequest(null);
             setFeedback('');
+            clearApproveCache(); // Xoá cache để fetch mới
             fetchCapstoneRequest(currentPage);
         } catch (error: any) {
             console.error("Lỗi khi chấp nhận yêu cầu:", error);
@@ -74,6 +95,7 @@ export default function TopicsApprovePage() {
             toast.success("Yêu cầu duyệt đề tài đã bị từ chối");
             setSelectedRequest(null);
             setFeedback('');
+            clearApproveCache(); // Xoá cache để fetch mới
             fetchCapstoneRequest(currentPage);
         } catch (error: any) {
             console.error("Lỗi khi từ chối yêu cầu:", error);
@@ -110,7 +132,16 @@ export default function TopicsApprovePage() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 text-gray-700">
-                        {capstoneRequests.length === 0 ? (
+                        {isLoading && capstoneRequests.length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="text-center py-12">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                        <span className="text-xs text-gray-500 font-semibold">Đang tải danh sách yêu cầu...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : capstoneRequests.length === 0 ? (
                             <tr>
                                 <td colSpan={6} className="text-center py-8 text-gray-400">
                                     Không có yêu cầu đăng ký đề tài nào đang chờ duyệt.

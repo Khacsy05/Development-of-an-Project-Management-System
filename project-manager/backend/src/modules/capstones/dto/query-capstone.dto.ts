@@ -6,4 +6,5 @@ export class CapstoneQuery {
     page?: number
     limit?: number
     faculty_id?: string
+    isUnassigned?: string
 }

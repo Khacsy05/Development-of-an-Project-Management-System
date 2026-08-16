@@ -11,12 +11,24 @@ import { useFacultyCacheStore } from '@/store/useFacultyCacheStore';
 export default function FacultyMilestonesPage() {
     const facultyId = useAuthStore((state) => state.faculty_id);
     const isInitializing = useAuthStore((state) => state.isInitializing);
-    const { milestonesCache, setMilestonesCache, clearMilestonesCache } = useFacultyCacheStore();
+    const { 
+        milestonesCache, 
+        setMilestonesCache, 
+        clearMilestonesCache,
+        semestersList,
+        setSemestersList,
+        selectedSemesterId: cachedSemesterId,
+        setSelectedSemesterId: setCachedSemesterId
+    } = useFacultyCacheStore();
 
-    const [semesters, setSemesters] = useState<any[]>([]);
-    const [selectedSemesterId, setSelectedSemesterId] = useState('');
-    const [milestones, setMilestones] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [semesters, setSemesters] = useState<any[]>(semestersList || []);
+    const [selectedSemesterId, setSelectedSemesterId] = useState(cachedSemesterId || '');
+    const [milestones, setMilestones] = useState<any[]>(
+        selectedSemesterId ? (milestonesCache.get(selectedSemesterId) || []) : []
+    );
+    const [isLoading, setIsLoading] = useState(
+        selectedSemesterId ? !milestonesCache.has(selectedSemesterId) : false
+    );
 
     // Modal UI states
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -32,8 +44,11 @@ export default function FacultyMilestonesPage() {
             const data = await getSemesterList();
             const list = Array.isArray(data) ? data : (data?.data || []);
             setSemesters(list);
-            if (list.length > 0) {
-                setSelectedSemesterId(String(list[0].semester_id));
+            setSemestersList(list);
+            if (list.length > 0 && !selectedSemesterId) {
+                const firstId = String(list[0].semester_id);
+                setSelectedSemesterId(firstId);
+                setCachedSemesterId(firstId);
             }
         } catch (error) {
             console.error('Lỗi khi lấy danh sách học kỳ:', error);
@@ -44,12 +59,13 @@ export default function FacultyMilestonesPage() {
         if (!semesterId) return;
 
         if (milestonesCache.has(semesterId)) {
-            // Hiển thị ngay lập tức từ cache (0ms delay)
+            // Hiển thị ngay lập tức từ cache (0ms delay) và không gọi API nữa
             setMilestones(milestonesCache.get(semesterId)!);
             setIsLoading(false);
-        } else {
-            setIsLoading(true);
+            return;
         }
+
+        setIsLoading(true);
 
         try {
             const data = await getMilestoneList(semesterId);
@@ -153,7 +169,10 @@ export default function FacultyMilestonesPage() {
                     <span className="text-xs font-semibold text-gray-600">Học kỳ:</span>
                     <select
                         value={selectedSemesterId}
-                        onChange={(e) => setSelectedSemesterId(e.target.value)}
+                        onChange={(e) => {
+                            setSelectedSemesterId(e.target.value);
+                            setCachedSemesterId(e.target.value);
+                        }}
                         className="px-3 py-1.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3b4c80]/20 bg-white text-xs font-bold text-gray-700"
                     >
                         <option value="">-- Chọn học kỳ --</option>
@@ -166,8 +185,8 @@ export default function FacultyMilestonesPage() {
                 </div>
             </div>
 
-            {/* Stepper Timeline UI */}
-            {isLoading ? (
+            {/* BẢNG HIỂN THỊ DỮ LIỆU */}
+            {isLoading && milestones.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                     <div className="w-10 h-10 border-4 border-[#3b4c80] border-t-transparent rounded-full animate-spin"></div>
                     <p className="text-sm text-gray-500 font-semibold">Đang tải lịch trình...</p>
@@ -183,59 +202,71 @@ export default function FacultyMilestonesPage() {
                     <p className="text-sm text-gray-500 mt-2 max-w-sm mx-auto">Học kỳ được chọn hiện chưa có mốc thời gian nộp bài nào được lưu trữ.</p>
                 </div>
             ) : (
-                <div className="relative border-l-2 border-slate-100 ml-4 py-4 flex flex-col gap-8">
-                    {milestones.map((milestone, index) => {
-                        const isExpired = new Date(milestone.deadline) < new Date();
-                        return (
-                            <div key={String(milestone.milestone_id)} className="relative pl-8 group">
-                                {/* Timeline Dot */}
-                                <div className={`absolute -left-3.5 top-0.5 w-7 h-7 rounded-full border-4 border-white flex items-center justify-center text-xs font-bold shadow-sm ${getStepColor(index)}`}>
-                                    {index + 1}
-                                </div>
-
-                                {/* Content Card */}
-                                <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                    <div className="flex flex-col gap-1.5 max-w-2xl">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <h3 className="text-sm font-bold text-gray-900">{milestone.phase_name}</h3>
-                                            <span className={`px-2 py-0.5 border text-[10px] rounded-full font-bold uppercase tracking-wider ${getStepBadge(index)}`}>
-                                                Giai đoạn {index + 1}
+                <div className="overflow-x-auto border border-gray-100 rounded-2xl bg-white shadow-sm">
+                    <table className="w-full border-collapse text-left text-xs md:text-sm">
+                        <thead>
+                            <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 font-semibold">
+                                <th className="px-6 py-4 text-center w-16">Giai đoạn</th>
+                                <th className="px-6 py-4 w-48">Tên giai đoạn</th>
+                                <th className="px-6 py-4">Mô tả & Yêu cầu nộp bài</th>
+                                <th className="px-6 py-4 w-52">Hạn chót khóa cổng</th>
+                                <th className="px-6 py-4 w-32">Trạng thái</th>
+                                <th className="px-6 py-4 text-center w-28">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 text-gray-700 font-medium">
+                            {milestones.map((milestone, index) => {
+                                const isExpired = new Date(milestone.deadline) < new Date();
+                                return (
+                                    <tr key={String(milestone.milestone_id)} className="hover:bg-gray-50/50 transition-colors">
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white ${
+                                                index === 0 ? 'bg-blue-500' :
+                                                index === 1 ? 'bg-amber-500' :
+                                                index === 2 ? 'bg-emerald-500' :
+                                                index === 3 ? 'bg-rose-500' : 'bg-gray-500'
+                                            }`}>
+                                                {index + 1}
                                             </span>
-                                            {isExpired && (
-                                                <span className="px-2 py-0.5 bg-red-50 border border-red-100 text-red-700 text-[10px] rounded-full font-bold uppercase tracking-wider">
+                                        </td>
+                                        <td className="px-6 py-4 font-bold text-gray-900">
+                                            {milestone.phase_name}
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-500 leading-relaxed max-w-xs md:max-w-md">
+                                            {milestone.description || (
+                                                <span className="text-gray-400 italic">Không có mô tả chi tiết yêu cầu nộp bài.</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-600 font-semibold font-mono">
+                                            {new Date(milestone.deadline).toLocaleString('vi-VN')}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {isExpired ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 border border-red-100 text-red-700 text-[10px] rounded-full font-bold uppercase tracking-wider">
                                                     Đã đóng cổng
                                                 </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-100 text-green-700 text-[10px] rounded-full font-bold uppercase tracking-wider animate-pulse">
+                                                    Đang mở cổng
+                                                </span>
                                             )}
-                                        </div>
-                                        <p className="text-xs text-gray-500 leading-relaxed font-medium">
-                                            {milestone.description || 'Không có mô tả chi tiết yêu cầu nộp bài.'}
-                                        </p>
-                                        <div className="flex items-center gap-1.5 mt-1">
-                                            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            <span className="text-xs text-slate-500 font-semibold">
-                                                Hạn nộp bài: <span className="text-gray-900 font-bold">{new Date(milestone.deadline).toLocaleString('vi-VN')}</span>
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Action button */}
-                                    <div className="flex-shrink-0 self-start md:self-center">
-                                        <button
-                                            onClick={() => handleOpenEdit(milestone)}
-                                            className="inline-flex items-center justify-center px-3 py-1.5 rounded-xl border border-indigo-100 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all shadow-sm gap-1"
-                                        >
-                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                            </svg>
-                                            Cấu hình hạn
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button
+                                                onClick={() => handleOpenEdit(milestone)}
+                                                className="inline-flex items-center justify-center px-3 py-1.5 rounded-xl border border-indigo-100 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all shadow-sm gap-1"
+                                            >
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                                Sửa hạn
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 </div>
             )}
 

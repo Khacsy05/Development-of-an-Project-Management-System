@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://link-render-backend-cua-ban.onrender.com/api/:path*"
+    }
+  ]
+}

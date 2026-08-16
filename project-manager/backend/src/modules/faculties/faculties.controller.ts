@@ -1,13 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { FacultiesService } from './faculties.service';
 import { CreateFacultyDto } from './dto/create-faculty.dto';
 import { UpdateFacultyDto } from './dto/update-faculty.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @Controller('faculties')
 export class FacultiesController {
-  constructor(private readonly facultiesService: FacultiesService) {}
+  constructor(private readonly facultiesService: FacultiesService) { }
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("Admin")
   create(@Body() createFacultyDto: CreateFacultyDto) {
     return this.facultiesService.create(createFacultyDto);
   }
@@ -28,12 +33,11 @@ export class FacultiesController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("Admin")
   update(@Param('id') id: string, @Body() updateFacultyDto: UpdateFacultyDto) {
     return this.facultiesService.update(+id, updateFacultyDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.facultiesService.remove(+id);
-  }
+
 }

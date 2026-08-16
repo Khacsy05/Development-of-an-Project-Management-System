@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -19,13 +19,20 @@ export class UsersController {
   }
 
   @Get()
-
   findAll(@Query() query: UserQueryDto) {
     return this.usersService.findAll(query);
   }
 
-  @Get(':id')
+  @Patch('profile')
+  @UseGuards(JwtAuthGuard)
+  updateProfile(@Req() req: any, @Body() updateUserDto: UpdateUserDto) {
+    const user = req.user as any;
+    // Cấm tự thay đổi quyền hạn và trạng thái
+    const { role_id, faculty_id, is_active, ...profileData } = updateUserDto;
+    return this.usersService.update(user.id, profileData);
+  }
 
+  @Get(':id')
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(+id);
   }

@@ -9,12 +9,17 @@ if (!dbUrl) {
 }
 
 const url = new URL(dbUrl);
+// Nếu kết nối qua cloud (khác localhost/127.0.0.1) thì bắt buộc bật SSL
+const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+const ssl = isLocal ? undefined : { rejectUnauthorized: true };
+
 const adapter = new PrismaMariaDb({
   host: url.hostname || 'localhost',
   port: url.port ? parseInt(url.port) : 3306,
   user: decodeURIComponent(url.username) || 'root',
   password: decodeURIComponent(url.password) || undefined,
   database: decodeURIComponent(url.pathname.substring(1)),
+  ssl,
 });
 
 const prisma = new PrismaClient({ adapter });

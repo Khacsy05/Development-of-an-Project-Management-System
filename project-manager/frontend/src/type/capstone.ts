@@ -31,6 +31,7 @@ export interface GetCapstonesQueryDto {
   page?: number;             // Phân trang
   limit?: number;            // Số lượng trên 1 trang
   faculty_id?: string;
+  isUnassigned?: 'true' | 'false';
 }
 
 export interface GetCapstoneRequestQueryDto {

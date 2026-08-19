@@ -13,13 +13,18 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
     // Phân tách chuỗi DATABASE_URL để lấy thông tin kết nối cho Driver
     const url = new URL(dbUrl);
-    
+
+    // Nếu kết nối qua cloud (khác localhost/127.0.0.1) thì bắt buộc bật SSL
+    const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    const ssl = isLocal ? undefined : { rejectUnauthorized: true };
+
     const adapter = new PrismaMariaDb({
       host: url.hostname || 'localhost',
       port: url.port ? parseInt(url.port) : 3306,
       user: decodeURIComponent(url.username) || 'root',
       password: decodeURIComponent(url.password) || undefined,
       database: decodeURIComponent(url.pathname.substring(1)),
+      ssl,
     });
 
     // Khởi tạo PrismaClient bằng adapter
